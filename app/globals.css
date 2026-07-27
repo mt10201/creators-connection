@@ -1,0 +1,209 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-dm-sans);
+  --font-display: var(--font-fraunces);
+}
+
+@theme {
+  /* Warm neutrals — paper, not screen */
+  --color-cream: #fcf8f3;
+  --color-parchment: #f6efe6;
+  --color-sand: #ece0d1;
+  --color-clay: #ddcab6;
+
+  /* Ink — warm browns instead of grey */
+  --color-ink: #2d211a;
+  --color-ink-muted: #6d5b4e;
+  --color-ink-faint: #9c8878;
+
+  /* Primary — terracotta */
+  --color-terracotta: #b3573a;
+  --color-terracotta-deep: #8f4229;
+  --color-terracotta-soft: #e9d2c6;
+
+  /* Secondary — an unexpected muted sage keeps it from reading as "rustic" */
+  --color-sage: #6c7f66;
+  --color-sage-soft: #dde3d7;
+
+  /* Highlight — warm ochre for small accents */
+  --color-ochre: #c98b3c;
+
+  /* Soft, warm-tinted elevation instead of neutral grey shadows */
+  --shadow-soft: 0 1px 2px rgba(45, 33, 26, 0.04),
+    0 10px 30px -18px rgba(45, 33, 26, 0.25);
+  --shadow-lift: 0 2px 6px rgba(45, 33, 26, 0.06),
+    0 26px 50px -24px rgba(45, 33, 26, 0.35);
+
+  --radius-card: 1.375rem;
+}
+
+:root {
+  --background: var(--color-cream);
+  --foreground: var(--color-ink);
+}
+
+body {
+  background-color: var(--color-cream);
+  /* Two barely-there washes give the page depth without a visible gradient. */
+  background-image: radial-gradient(
+      70rem 40rem at 12% -10%,
+      rgba(233, 210, 198, 0.55),
+      transparent 60%
+    ),
+    radial-gradient(
+      55rem 34rem at 100% 0%,
+      rgba(221, 227, 215, 0.45),
+      transparent 62%
+    );
+  background-attachment: fixed;
+  color: var(--color-ink);
+}
+
+/* Editorial micro-label used above section headings. */
+.eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+/* Thin double rule — a small signature detail. */
+.rule-double {
+  border-top: 1px solid var(--color-sand);
+  box-shadow: 0 3px 0 -2px var(--color-sand);
+}
+
+@layer components {
+  .form-label {
+    @apply block text-sm font-medium text-ink;
+  }
+
+  .form-input {
+    @apply mt-2 block min-h-11 w-full rounded-xl border border-sand bg-cream px-4 py-2.5 text-base text-ink transition duration-200 placeholder:text-ink-faint hover:border-clay focus:border-terracotta focus:outline-none focus:ring-4 focus:ring-terracotta-soft/60 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm;
+  }
+
+  .form-input[aria-invalid="true"] {
+    @apply border-terracotta/50 focus:border-terracotta focus:ring-terracotta-soft/70;
+  }
+
+  .form-hint {
+    @apply mt-1.5 text-xs text-ink-faint;
+  }
+
+  .form-alert {
+    @apply rounded-xl border px-4 py-3 text-sm;
+    animation: fade-in 0.25s ease-out;
+  }
+
+  .form-alert-error {
+    @apply rounded-xl border border-terracotta/25 bg-terracotta-soft/50 px-4 py-3 text-sm text-terracotta-deep;
+    animation: fade-in 0.25s ease-out;
+  }
+
+  .form-alert-success {
+    @apply rounded-xl border border-sage/25 bg-sage-soft/60 px-4 py-3 text-sm text-sage;
+    animation: fade-in 0.25s ease-out;
+  }
+
+  /* Every button lands on the same 44px minimum touch target. */
+  .btn-primary {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-terracotta px-6 text-sm font-medium text-cream shadow-soft transition duration-200 ease-out hover:bg-terracotta-deep hover:shadow-lift active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-terracotta disabled:hover:shadow-soft disabled:active:translate-y-0;
+  }
+
+  .btn-secondary {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-clay bg-cream px-6 text-sm font-medium text-ink transition duration-200 ease-out hover:border-terracotta hover:text-terracotta active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .btn-on-ink {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-cream/25 px-6 text-sm font-medium text-cream transition duration-200 ease-out hover:border-cream/40 hover:bg-cream/10 active:translate-y-px;
+  }
+
+  /* Pairs with .btn-* for hero-scale actions. */
+  .btn-lg {
+    @apply min-h-[3.25rem] px-8 text-base;
+  }
+
+  .chip {
+    @apply inline-flex min-h-10 shrink-0 items-center rounded-full border px-4 text-sm transition duration-200 ease-out active:translate-y-px;
+  }
+
+  .skeleton {
+    @apply relative overflow-hidden bg-sand/60;
+  }
+
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      rgba(252, 248, 243, 0.65),
+      transparent
+    );
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes pop {
+  50% {
+    transform: scale(1.28);
+  }
+}
+
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.25s ease-out;
+}
+
+.animate-pop {
+  animation: pop 0.32s ease-out;
+}
+
+.animate-spin-slow {
+  animation: spin 0.7s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .skeleton::after {
+    display: none;
+  }
+}
+
+::selection {
+  background-color: var(--color-terracotta-soft);
+  color: var(--color-terracotta-deep);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-terracotta);
+  outline-offset: 2px;
+}
