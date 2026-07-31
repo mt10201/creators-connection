@@ -1,11 +1,24 @@
 import type { ReactNode } from "react";
 
+/**
+ * Typographic marks rather than icon art, matching the glyph language the
+ * like/save buttons already use. Omit `mark` for the plain dot.
+ */
+const marks = {
+  spark: "✦",
+  star: "☆",
+  post: "✎",
+} as const;
+
 type Props = {
   eyebrow?: string;
   title: string;
-  description: string;
+  description: ReactNode;
   /** Action buttons, laid out in a responsive row. */
   children?: ReactNode;
+  /** Wider content below the actions, e.g. onboarding steps. */
+  footer?: ReactNode;
+  mark?: keyof typeof marks;
   tone?: "neutral" | "error";
 };
 
@@ -14,31 +27,46 @@ export default function EmptyState({
   title,
   description,
   children,
+  footer,
+  mark,
   tone = "neutral",
 }: Props) {
   const isError = tone === "error";
 
   return (
     <div
-      className={`rounded-[2rem] border px-6 py-16 text-center sm:px-10 sm:py-20 ${
+      className={`animate-fade-in rounded-[2rem] border px-6 py-16 text-center sm:px-10 sm:py-20 ${
         isError
           ? "border-terracotta/20 bg-terracotta-soft/30"
           : "border-sand bg-parchment/60 shadow-soft"
       }`}
     >
       <div className="mx-auto max-w-md">
-        {/* A small rotated diamond stands in for an illustration. */}
+        {/* A rotated square mat stands in for an illustration; the mark inside
+            is counter-rotated so it reads upright. */}
         <span
           aria-hidden
-          className={`mx-auto flex h-12 w-12 rotate-45 items-center justify-center rounded-[0.7rem] border transition-transform duration-300 ${
-            isError ? "border-terracotta/40" : "border-clay"
+          className={`mx-auto flex h-14 w-14 rotate-45 items-center justify-center rounded-[0.85rem] border ${
+            isError
+              ? "border-terracotta/40 bg-terracotta-soft/50"
+              : "border-clay bg-cream shadow-soft"
           }`}
         >
-          <span
-            className={`h-1.5 w-1.5 rounded-full ${
-              isError ? "bg-terracotta" : "bg-clay"
-            }`}
-          />
+          {mark ? (
+            <span
+              className={`-rotate-45 text-lg leading-none ${
+                isError ? "text-terracotta" : "text-terracotta/75"
+              }`}
+            >
+              {marks[mark]}
+            </span>
+          ) : (
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${
+                isError ? "bg-terracotta" : "bg-clay"
+              }`}
+            />
+          )}
         </span>
 
         {eyebrow && (
@@ -69,6 +97,13 @@ export default function EmptyState({
           </div>
         )}
       </div>
+
+      {/* Outside the prose column so step guidance can use the full card width. */}
+      {footer && (
+        <div className="mx-auto mt-12 max-w-3xl border-t border-sand pt-10 text-left">
+          {footer}
+        </div>
+      )}
     </div>
   );
 }

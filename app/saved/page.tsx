@@ -6,6 +6,9 @@ import ProductCard, {
   type ProductCardPost,
 } from "@/app/components/ProductCard";
 import EmptyState from "@/app/components/EmptyState";
+import OnboardingSteps, {
+  firstSaveSteps,
+} from "@/app/components/OnboardingSteps";
 
 export const metadata: Metadata = {
   title: "Saved | Creators Connection",
@@ -108,9 +111,16 @@ export default async function SavedPage() {
         <div className="mx-auto max-w-7xl">
           {posts.length === 0 ? (
             <EmptyState
+              mark="star"
               eyebrow="Nothing saved yet"
               title="Your shelf is empty"
               description="Tap the star on any product and it will wait for you here — a private collection of the work you want to come back to."
+              footer={
+                <OnboardingSteps
+                  eyebrow="How saving works"
+                  steps={firstSaveSteps}
+                />
+              }
             >
               <Link href="/explore" className="btn-primary">
                 Start Exploring

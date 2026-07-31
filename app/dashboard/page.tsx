@@ -6,6 +6,9 @@ import ProductCard, {
   type ProductCardPost,
 } from "@/app/components/ProductCard";
 import EmptyState from "@/app/components/EmptyState";
+import OnboardingSteps, {
+  firstPostSteps,
+} from "@/app/components/OnboardingSteps";
 
 export const metadata: Metadata = {
   title: "Dashboard | Creators Connection",
@@ -82,6 +85,8 @@ export default async function DashboardPage() {
     for (const row of saves ?? []) savedIds.add(row.post_id);
   }
 
+  const isNewCreator = posts.length === 0;
+
   const stats = [
     {
       label: "Posts",
@@ -111,13 +116,14 @@ export default async function DashboardPage() {
                 Dashboard
               </h1>
               <p className="mt-3 max-w-md text-base leading-relaxed text-ink-muted">
-                Welcome back, {username}. Track credits, see how your work is
-                landing, and share something new.
+                {isNewCreator
+                  ? `Welcome, ${username}. Your studio is ready — the only thing left is sharing your first product.`
+                  : `Welcome back, ${username}. Track credits, see how your work is landing, and share something new.`}
               </p>
             </div>
 
             <Link href="/upload" className="btn-primary btn-lg shrink-0">
-              Upload new product
+              {isNewCreator ? "Upload your first product" : "Upload new product"}
             </Link>
           </div>
 
@@ -131,8 +137,9 @@ export default async function DashboardPage() {
               </span>
             </p>
             <p className="mt-4 max-w-lg text-sm leading-relaxed text-ink-muted">
-              Earn 5 credits each time you publish. Use them to boost visibility
-              as the system grows.
+              {credits === 0
+                ? "Publish your first product and 5 credits land here straight away. Use them to boost visibility as the system grows."
+                : "Earn 5 credits each time you publish. Use them to boost visibility as the system grows."}
             </p>
           </div>
 
@@ -160,7 +167,7 @@ export default async function DashboardPage() {
             <div>
               <span className="eyebrow text-sage">Your posts</span>
               <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-                Work you&apos;ve shared
+                {isNewCreator ? "Your first post" : "Work you\u2019ve shared"}
               </h2>
             </div>
             {posts.length > 0 && profile?.username && (
@@ -173,14 +180,16 @@ export default async function DashboardPage() {
             )}
           </div>
 
-          {posts.length === 0 ? (
+          {isNewCreator ? (
             <EmptyState
+              mark="post"
               eyebrow="Nothing posted yet"
               title="Your first product is waiting"
-              description="Upload something you've made to earn credits and show up in the Explore feed."
+              description="Upload something you've made to earn credits and show up in the Explore feed. There's no bar to clear here — work in progress is welcome."
+              footer={<OnboardingSteps steps={firstPostSteps} />}
             >
               <Link href="/upload" className="btn-primary">
-                Upload new product
+                Upload your first product
               </Link>
               <Link href="/explore" className="btn-secondary">
                 Browse for inspiration

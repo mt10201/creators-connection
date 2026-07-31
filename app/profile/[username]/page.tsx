@@ -6,6 +6,9 @@ import ProductCard, {
   type ProductCardPost,
 } from "@/app/components/ProductCard";
 import EmptyState from "@/app/components/EmptyState";
+import OnboardingSteps, {
+  firstPostSteps,
+} from "@/app/components/OnboardingSteps";
 
 type Props = { params: Promise<{ username: string }> };
 
@@ -138,6 +141,7 @@ export default async function ProfilePage({ params }: Props) {
         <div className="mx-auto max-w-7xl">
           {posts.length === 0 ? (
             <EmptyState
+              mark={isOwnProfile ? "post" : "spark"}
               eyebrow={isOwnProfile ? "Your portfolio" : "Nothing here yet"}
               title={
                 isOwnProfile
@@ -146,8 +150,16 @@ export default async function ProfilePage({ params }: Props) {
               }
               description={
                 isOwnProfile
-                  ? "Post a product to start earning credits and put your work in front of other makers."
-                  : "Check back soon — new work shows up here as it's published."
+                  ? "This page is your portfolio — it fills in as you publish. Post a product to start earning credits and put your work in front of other makers."
+                  : "Check back soon — new work shows up here as it's published. In the meantime, the feed is full of things worth seeing."
+              }
+              footer={
+                isOwnProfile ? (
+                  <OnboardingSteps
+                    eyebrow="Your first post, in three steps"
+                    steps={firstPostSteps}
+                  />
+                ) : undefined
               }
             >
               <Link

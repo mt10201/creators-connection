@@ -4,6 +4,10 @@ import { productCategories } from "@/lib/categories";
 import { createClient } from "@/lib/supabase/server";
 import ProductCard from "@/app/components/ProductCard";
 import EmptyState from "@/app/components/EmptyState";
+import OnboardingSteps, {
+  firstPostSteps,
+  joinSteps,
+} from "@/app/components/OnboardingSteps";
 import CategoryFilters from "@/app/components/CategoryFilters";
 import ExploreSearch from "@/app/components/ExploreSearch";
 
@@ -226,6 +230,7 @@ export default async function ExplorePage({
               </EmptyState>
             ) : (
               <EmptyState
+                mark="spark"
                 eyebrow={
                   activeCategory === "All" ? "Empty feed" : activeCategory
                 }
@@ -239,10 +244,22 @@ export default async function ExplorePage({
                     ? "This feed fills up as makers share their work. Yours could be the first piece here."
                     : `Nobody has shared work in ${activeCategory} yet — post yours and set the tone for this category.`
                 }
+                footer={
+                  <OnboardingSteps
+                    eyebrow={user ? "How to get started" : "Joining takes a minute"}
+                    steps={user ? firstPostSteps : joinSteps}
+                  />
+                }
               >
-                <Link href="/upload" className="btn-primary">
-                  Upload a Product
-                </Link>
+                {user ? (
+                  <Link href="/upload" className="btn-primary">
+                    Upload a Product
+                  </Link>
+                ) : (
+                  <Link href="/signup" className="btn-primary">
+                    Join to Post
+                  </Link>
+                )}
                 {activeCategory !== "All" && (
                   <Link href="/explore" className="btn-secondary">
                     Browse Everything
