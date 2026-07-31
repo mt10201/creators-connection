@@ -119,6 +119,25 @@ export function validateProductUrl(value: string): string | null {
   }
 }
 
+/**
+ * Recovers the storage path from a public URL. Legacy rows were written before
+ * `media_paths` existed, so their files can only be located this way.
+ */
+export function storagePathFromPublicUrl(url: string): string | null {
+  const marker = `/${PRODUCT_IMAGES_BUCKET}/`;
+  const start = url.indexOf(marker);
+  if (start === -1) return null;
+
+  const path = url.slice(start + marker.length).split("?")[0];
+  if (!path) return null;
+
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return path;
+  }
+}
+
 function fileExtension(file: File) {
   const fromName = file.name.split(".").pop()?.toLowerCase();
   if (fromName && /^[a-z0-9]{1,5}$/.test(fromName)) return fromName;

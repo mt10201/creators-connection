@@ -49,7 +49,7 @@ export default function ExploreSearch({ initialQuery, category }: Props) {
       }`}
     >
       <label htmlFor="explore-search" className="sr-only">
-        Search products
+        Search products or creators
       </label>
       <span
         aria-hidden
@@ -76,7 +76,7 @@ export default function ExploreSearch({ initialQuery, category }: Props) {
         type="search"
         value={value}
         onChange={(event) => setValue(event.target.value)}
-        placeholder="Search titles and descriptions…"
+        placeholder="Search products or creators…"
         autoComplete="off"
         className="form-input mt-0 min-h-12 border-sand bg-cream/90 py-3 pl-12 shadow-soft placeholder:text-ink-faint/80 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
         style={{ paddingRight: value ? "8.5rem" : "5.25rem" }}

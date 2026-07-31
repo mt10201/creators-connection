@@ -293,6 +293,8 @@ create trigger on_post_created_award_credits
   for each row
   execute function public.award_post_credits();
 
+-- The matching clawback for deleted posts lives in post_delete_credits.sql.
+
 -- ---------------------------------------------------------------------------
 -- Storage: product-images bucket
 -- ---------------------------------------------------------------------------

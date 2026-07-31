@@ -63,9 +63,33 @@ export default async function ExplorePage({
 
   if (searchQuery) {
     const pattern = `%${escapeIlike(searchQuery).replace(/"/g, "")}%`;
-    query = query.or(
-      `product_title.ilike."${pattern}",description.ilike."${pattern}"`
-    );
+
+    // Usernames live on a separate view, so resolve them to creator ids first
+    // and fold those into the same OR filter.
+    const { data: matchedCreators, error: creatorMatchError } = await supabase
+      .from("public_profiles")
+      .select("id")
+      .ilike("username", pattern)
+      .limit(60);
+
+    if (creatorMatchError) {
+      console.error(
+        "Failed to search creator usernames:",
+        creatorMatchError.message
+      );
+    }
+
+    const filters = [
+      `product_title.ilike."${pattern}"`,
+      `description.ilike."${pattern}"`,
+    ];
+
+    const matchedCreatorIds = (matchedCreators ?? []).map((row) => row.id);
+    if (matchedCreatorIds.length > 0) {
+      filters.push(`creator_id.in.(${matchedCreatorIds.join(",")})`);
+    }
+
+    query = query.or(filters.join(","));
   }
 
   const { data, error } = await query;
@@ -184,7 +208,7 @@ export default async function ExplorePage({
                 title="Nothing turned up"
                 description={
                   activeCategory === "All"
-                    ? `We couldn’t find products matching “${searchQuery}”. Try a shorter phrase, or browse by category.`
+                    ? `We couldn’t find products or creators matching “${searchQuery}”. Try a shorter phrase, check the username spelling, or browse by category.`
                     : `No ${activeCategory.toLowerCase()} posts match “${searchQuery}”. Try another term, or clear the search to see this category.`
                 }
               >

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import PostActions from "@/app/components/PostActions";
+import DeletePostButton from "@/app/components/DeletePostButton";
 import ProductGallery from "./ProductGallery";
 
 type Props = { params: Promise<{ id: string }> };
@@ -179,12 +180,18 @@ export default async function ProductPage({ params }: Props) {
                 size="md"
               />
               {isOwner && (
-                <Link
-                  href={`/edit/${post.id}`}
-                  className="inline-flex min-h-11 items-center rounded-full border border-clay bg-cream px-4 text-sm font-medium text-ink transition duration-200 hover:border-terracotta hover:text-terracotta"
-                >
-                  Edit
-                </Link>
+                <>
+                  <Link
+                    href={`/edit/${post.id}`}
+                    className="inline-flex min-h-11 items-center rounded-full border border-clay bg-cream px-4 text-sm font-medium text-ink transition duration-200 hover:border-terracotta hover:text-terracotta"
+                  >
+                    Edit
+                  </Link>
+                  <DeletePostButton
+                    postId={post.id}
+                    title={post.product_title}
+                  />
+                </>
               )}
             </div>
 
