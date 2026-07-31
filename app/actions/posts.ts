@@ -107,7 +107,6 @@ export async function deletePost(postId: string): Promise<DeletePostResult> {
 
   revalidatePath("/explore");
   revalidatePath("/dashboard");
-  revalidatePath("/saved");
   revalidatePath(`/products/${postId}`);
   if (profilePath) revalidatePath(profilePath);
 

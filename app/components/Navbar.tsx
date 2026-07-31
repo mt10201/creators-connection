@@ -66,11 +66,9 @@ export default async function Navbar() {
           ))}
           {isLoggedIn && (
             <>
+              {/* Liked and saved posts live in the dashboard's own tabs. */}
               <Link href="/dashboard" className={linkClass}>
                 Dashboard
-              </Link>
-              <Link href="/saved" className={linkClass}>
-                Saved
               </Link>
               <Link href="/upload" className={linkClass}>
                 Upload
@@ -161,9 +159,6 @@ export default async function Navbar() {
                 <>
                   <Link href="/dashboard" className={mobileLinkClass}>
                     Dashboard
-                  </Link>
-                  <Link href="/saved" className={mobileLinkClass}>
-                    Saved
                   </Link>
                   <Link href="/upload" className={mobileLinkClass}>
                     Upload

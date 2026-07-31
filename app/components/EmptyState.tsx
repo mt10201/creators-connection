@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 const marks = {
   spark: "✦",
   star: "☆",
+  heart: "♡",
   post: "✎",
 } as const;
 

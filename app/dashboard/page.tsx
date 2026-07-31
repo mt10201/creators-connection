@@ -2,17 +2,24 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { countCollection, loadCollection } from "@/lib/collections";
 import ProductCard, {
   type ProductCardPost,
 } from "@/app/components/ProductCard";
 import EmptyState from "@/app/components/EmptyState";
 import OnboardingSteps, {
   firstPostSteps,
+  firstSaveSteps,
 } from "@/app/components/OnboardingSteps";
+import DashboardTabs, {
+  parseDashboardView,
+  type DashboardView,
+} from "./DashboardTabs";
 
 export const metadata: Metadata = {
   title: "Dashboard | Creators Connection",
-  description: "Your credits, posts, and creator activity at a glance.",
+  description:
+    "Your credits, posts, likes, and saved products at a glance.",
 };
 
 type OwnPost = ProductCardPost & {
@@ -20,7 +27,35 @@ type OwnPost = ProductCardPost & {
   save_count: number | null;
 };
 
-export default async function DashboardPage() {
+const headings: Record<
+  DashboardView,
+  { eyebrow: string; title: string; note: string }
+> = {
+  posts: {
+    eyebrow: "Your posts",
+    title: "Work you’ve shared",
+    note: "Everything you've published, newest first.",
+  },
+  liked: {
+    eyebrow: "Posts you’ve liked",
+    title: "Work that caught your eye",
+    note: "The posts you've liked, most recent first.",
+  },
+  saved: {
+    eyebrow: "Posts you’ve saved",
+    title: "Your shelf",
+    note: "Only you can see what you've saved.",
+  },
+};
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>;
+}) {
+  const { view: rawView } = await searchParams;
+  const activeView = parseDashboardView(rawView);
+
   const supabase = await createClient();
 
   const {
@@ -31,21 +66,24 @@ export default async function DashboardPage() {
     redirect("/login?redirectTo=/dashboard");
   }
 
-  const [{ data: profile }, { data: postRows }] = await Promise.all([
-    supabase
-      .from("users")
-      .select("username, credit_balance")
-      .eq("id", user.id)
-      .maybeSingle(),
-    supabase
-      .from("posts")
-      .select(
-        "id, product_title, description, category, media_urls, video_url, like_count, save_count"
-      )
-      .eq("creator_id", user.id)
-      .eq("status", "active")
-      .order("created_at", { ascending: false }),
-  ]);
+  const [{ data: profile }, { data: postRows }, likedCount, savedCount] =
+    await Promise.all([
+      supabase
+        .from("users")
+        .select("username, credit_balance")
+        .eq("id", user.id)
+        .maybeSingle(),
+      supabase
+        .from("posts")
+        .select(
+          "id, product_title, description, category, media_urls, video_url, like_count, save_count"
+        )
+        .eq("creator_id", user.id)
+        .eq("status", "active")
+        .order("created_at", { ascending: false }),
+      countCollection(supabase, user.id, "likes"),
+      countCollection(supabase, user.id, "saves"),
+    ]);
 
   const posts = (postRows ?? []) as OwnPost[];
   const credits = profile?.credit_balance ?? 0;
@@ -63,11 +101,21 @@ export default async function DashboardPage() {
     0
   );
 
-  const postIds = posts.map((post) => post.id);
-  const likedIds = new Set<string>();
-  const savedIds = new Set<string>();
+  // Only the visible list is fetched in full; the other tabs just need counts.
+  const collection =
+    activeView === "posts"
+      ? null
+      : await loadCollection(
+          supabase,
+          user.id,
+          activeView === "liked" ? "likes" : "saves"
+        );
 
-  if (postIds.length > 0) {
+  const ownLikedIds = new Set<string>();
+  const ownSavedIds = new Set<string>();
+
+  if (activeView === "posts" && posts.length > 0) {
+    const postIds = posts.map((post) => post.id);
     const [{ data: likes }, { data: saves }] = await Promise.all([
       supabase
         .from("likes")
@@ -81,11 +129,15 @@ export default async function DashboardPage() {
         .in("post_id", postIds),
     ]);
 
-    for (const row of likes ?? []) likedIds.add(row.post_id);
-    for (const row of saves ?? []) savedIds.add(row.post_id);
+    for (const row of likes ?? []) ownLikedIds.add(row.post_id);
+    for (const row of saves ?? []) ownSavedIds.add(row.post_id);
   }
 
   const isNewCreator = posts.length === 0;
+  const heading = headings[activeView];
+  // The empty state below carries its own explanation, so the "newest first"
+  // note would only contradict it.
+  const visibleCount = collection ? collection.posts.length : posts.length;
 
   const stats = [
     {
@@ -105,6 +157,12 @@ export default async function DashboardPage() {
     },
   ];
 
+  const counts: Record<DashboardView, number> = {
+    posts: posts.length,
+    liked: likedCount,
+    saved: savedCount,
+  };
+
   return (
     <div>
       <section className="px-5 pb-8 pt-14 sm:px-8 sm:pt-16">
@@ -118,7 +176,7 @@ export default async function DashboardPage() {
               <p className="mt-3 max-w-md text-base leading-relaxed text-ink-muted">
                 {isNewCreator
                   ? `Welcome, ${username}. Your studio is ready — the only thing left is sharing your first product.`
-                  : `Welcome back, ${username}. Track credits, see how your work is landing, and share something new.`}
+                  : `Welcome back, ${username}. Track credits, see how your work is landing, and revisit what you've liked and saved.`}
               </p>
             </div>
 
@@ -163,48 +221,110 @@ export default async function DashboardPage() {
 
       <section className="px-5 pb-12 sm:px-8">
         <div className="mx-auto max-w-7xl">
-          <div className="mb-6 flex items-end justify-between gap-4">
+          <div className="rule-double mb-8" />
+
+          <DashboardTabs active={activeView} counts={counts} />
+
+          <div className="mb-6 mt-8 flex items-end justify-between gap-4">
             <div>
-              <span className="eyebrow text-sage">Your posts</span>
+              <span className="eyebrow text-sage">{heading.eyebrow}</span>
               <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-                {isNewCreator ? "Your first post" : "Work you\u2019ve shared"}
+                {activeView === "posts" && isNewCreator
+                  ? "Your first post"
+                  : heading.title}
               </h2>
+              {visibleCount > 0 && (
+                <p className="mt-1.5 text-sm text-ink-muted">{heading.note}</p>
+              )}
             </div>
-            {posts.length > 0 && profile?.username && (
+            {activeView === "posts" && posts.length > 0 && profile?.username && (
               <Link
                 href={`/profile/${encodeURIComponent(profile.username)}`}
-                className="hidden text-sm text-terracotta underline-offset-4 transition hover:underline sm:inline"
+                className="hidden shrink-0 text-sm text-terracotta underline-offset-4 transition hover:underline sm:inline"
               >
                 View public profile →
               </Link>
             )}
           </div>
 
-          {isNewCreator ? (
-            <EmptyState
-              mark="post"
-              eyebrow="Nothing posted yet"
-              title="Your first product is waiting"
-              description="Upload something you've made to earn credits and show up in the Explore feed. There's no bar to clear here — work in progress is welcome."
-              footer={<OnboardingSteps steps={firstPostSteps} />}
-            >
-              <Link href="/upload" className="btn-primary">
-                Upload your first product
-              </Link>
-              <Link href="/explore" className="btn-secondary">
-                Browse for inspiration
-              </Link>
-            </EmptyState>
+          {activeView === "posts" ? (
+            isNewCreator ? (
+              <EmptyState
+                mark="post"
+                eyebrow="Nothing posted yet"
+                title="Your first product is waiting"
+                description="Upload something you've made to earn credits and show up in the Explore feed. There's no bar to clear here — work in progress is welcome."
+                footer={<OnboardingSteps steps={firstPostSteps} />}
+              >
+                <Link href="/upload" className="btn-primary">
+                  Upload your first product
+                </Link>
+                <Link href="/explore" className="btn-secondary">
+                  Browse for inspiration
+                </Link>
+              </EmptyState>
+            ) : (
+              <div className="animate-fade-in grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-7 xl:grid-cols-4">
+                {posts.map((post, index) => (
+                  <ProductCard
+                    key={post.id}
+                    post={post}
+                    showCreator={false}
+                    isLoggedIn
+                    liked={ownLikedIds.has(post.id)}
+                    saved={ownSavedIds.has(post.id)}
+                    priority={index < 4}
+                  />
+                ))}
+              </div>
+            )
+          ) : collection && collection.posts.length === 0 ? (
+            activeView === "liked" ? (
+              <EmptyState
+                mark="heart"
+                eyebrow="Nothing liked yet"
+                title="No likes given out yet"
+                description="When a piece resonates, tap ♡ — it tells the maker their work landed, and it keeps the post here so you can find it again."
+              >
+                <Link href="/explore" className="btn-primary">
+                  Start Exploring
+                </Link>
+              </EmptyState>
+            ) : (
+              <EmptyState
+                mark="star"
+                eyebrow="Nothing saved yet"
+                title="Your shelf is empty"
+                description="Tap the star on any product and it will wait for you here — a private collection of the work you want to come back to."
+                footer={
+                  <OnboardingSteps
+                    eyebrow="How saving works"
+                    steps={firstSaveSteps}
+                  />
+                }
+              >
+                <Link href="/explore" className="btn-primary">
+                  Start Exploring
+                </Link>
+                <Link href="/upload" className="btn-secondary">
+                  Share Your Work
+                </Link>
+              </EmptyState>
+            )
           ) : (
             <div className="animate-fade-in grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-7 xl:grid-cols-4">
-              {posts.map((post, index) => (
+              {collection?.posts.map((post, index) => (
                 <ProductCard
                   key={post.id}
                   post={post}
-                  showCreator={false}
+                  creatorName={
+                    post.creator_id
+                      ? collection.creatorNames.get(post.creator_id)
+                      : null
+                  }
                   isLoggedIn
-                  liked={likedIds.has(post.id)}
-                  saved={savedIds.has(post.id)}
+                  liked={collection.likedIds.has(post.id)}
+                  saved={collection.savedIds.has(post.id)}
                   priority={index < 4}
                 />
               ))}

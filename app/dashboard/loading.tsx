@@ -27,6 +27,19 @@ export default function DashboardLoading() {
 
       <section className="px-5 pb-12 sm:px-8">
         <div className="mx-auto max-w-7xl">
+          <div className="rule-double mb-8" />
+          <div className="flex gap-2">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                aria-hidden
+                className="skeleton h-10 w-36 rounded-full"
+              />
+            ))}
+          </div>
+          <div className="mb-6 mt-8">
+            <div aria-hidden className="skeleton h-7 w-56 rounded-full" />
+          </div>
           <ProductGridSkeleton count={4} />
         </div>
       </section>

@@ -53,6 +53,8 @@ async function toggle(
 
   revalidatePath("/explore");
   revalidatePath(`/products/${postId}`);
+  // The dashboard hosts the liked and saved collections.
+  revalidatePath("/dashboard");
 
   const count =
     (post as Record<string, number | null> | null)?.[countColumn] ?? 0;
