@@ -21,9 +21,9 @@ export function getSiteUrl(): URL {
   return new URL("http://localhost:3000");
 }
 
-/** Absolute URL for the App Router opengraph-image route. */
+/** Absolute URL for the static default Open Graph / Twitter share image. */
 export function getDefaultOgImageUrl(): string {
-  return new URL("/opengraph-image", getSiteUrl()).toString();
+  return new URL("/og.png", getSiteUrl()).toString();
 }
 
 /** Collapse whitespace and cap length for meta descriptions. */
