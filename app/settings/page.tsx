@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import SettingsForms from "./SettingsForms";
@@ -38,62 +37,26 @@ export default async function SettingsPage() {
 
   return (
     <div>
-      <section className="px-5 pb-8 pt-14 sm:px-8 sm:pt-16">
-        <div className="mx-auto max-w-2xl">
+      <section className="px-5 pb-6 pt-10 sm:px-8 sm:pt-12">
+        <div className="mx-auto max-w-xl">
           <span className="eyebrow text-sage">Your account</span>
-          <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight sm:text-5xl">
+          <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
             Settings
           </h1>
-          <p className="mt-3 max-w-md text-base leading-relaxed text-ink-muted">
-            Update the details you show the community, and keep your sign-in
-            secure.
+          <p className="mt-2 max-w-md text-sm leading-relaxed text-ink-muted">
+            Update your public details and sign-in password.
           </p>
         </div>
       </section>
 
-      <section className="px-5 pb-14 sm:px-8">
-        <div className="mx-auto max-w-2xl space-y-8">
-          {/* Read-only account snapshot */}
-          <div className="rounded-[2rem] border border-sand bg-cream p-6 shadow-soft sm:p-8">
-            <span className="eyebrow text-sage">Overview</span>
-            <ul className="mt-5 space-y-5">
-              <li>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-faint">
-                  Email
-                </p>
-                <p className="mt-1.5 text-base text-ink">{email}</p>
-                <p className="mt-1 text-sm text-ink-muted">
-                  Email can’t be changed from this page yet. Contact support if
-                  you need a different address.
-                </p>
-              </li>
-              <li className="border-t border-sand pt-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-faint">
-                  Credit balance
-                </p>
-                <p className="mt-1.5 font-display text-3xl font-semibold tracking-tight text-ink">
-                  {credits}
-                  <span className="ml-2 text-base font-medium text-ink-muted">
-                    {credits === 1 ? "credit" : "credits"}
-                  </span>
-                </p>
-                <p className="mt-1 text-sm text-ink-muted">
-                  Earn 5 credits each time you publish a product.
-                </p>
-              </li>
-            </ul>
-
-            {profileHref && (
-              <Link
-                href={profileHref}
-                className="mt-6 inline-flex text-sm text-terracotta underline-offset-4 transition hover:underline"
-              >
-                View public profile →
-              </Link>
-            )}
-          </div>
-
-          <SettingsForms initialUsername={username} />
+      <section className="px-5 pb-12 sm:px-8">
+        <div className="mx-auto max-w-xl">
+          <SettingsForms
+            initialUsername={username}
+            email={email}
+            credits={credits}
+            profileHref={profileHref}
+          />
         </div>
       </section>
     </div>
