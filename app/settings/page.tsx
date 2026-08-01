@@ -19,11 +19,31 @@ export default async function SettingsPage() {
     redirect("/login?redirectTo=/settings");
   }
 
-  const { data: profile } = await supabase
+  // Prefer the full row; fall back if profile_photo hasn’t been migrated yet.
+  let profile: {
+    username: string | null;
+    credit_balance: number | null;
+    profile_photo: string | null;
+  } | null = null;
+
+  const withPhoto = await supabase
     .from("users")
     .select("username, credit_balance, profile_photo")
     .eq("id", user.id)
     .maybeSingle();
+
+  if (!withPhoto.error) {
+    profile = withPhoto.data;
+  } else {
+    const withoutPhoto = await supabase
+      .from("users")
+      .select("username, credit_balance")
+      .eq("id", user.id)
+      .maybeSingle();
+    profile = withoutPhoto.data
+      ? { ...withoutPhoto.data, profile_photo: null }
+      : null;
+  }
 
   const username =
     profile?.username?.trim() ||

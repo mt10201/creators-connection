@@ -51,11 +51,18 @@ export async function uploadProfilePhoto(
   const { error: uploadError } = await storage.upload(path, file, {
     cacheControl: "3600",
     upsert: false,
-    contentType: file.type,
+    contentType: file.type || "image/jpeg",
   });
 
   if (uploadError) {
-    return { ok: false, message: `Upload failed: ${uploadError.message}` };
+    const hint =
+      /bucket|not found|row-level security|policy/i.test(uploadError.message)
+        ? " Run supabase/profile_photos.sql in the Supabase SQL Editor if you haven’t yet."
+        : "";
+    return {
+      ok: false,
+      message: `Upload failed: ${uploadError.message}.${hint}`,
+    };
   }
 
   const {

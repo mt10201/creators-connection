@@ -33,16 +33,38 @@ export async function updateProfilePhoto(
     return { ok: false, error: "Please log in to do that." };
   }
 
-  const file = formData.get("photo");
-  if (!(file instanceof File) || file.size === 0) {
+  const entry = formData.get("photo");
+  // Server Actions may surface the upload as File or Blob depending on runtime.
+  let file: File | null = null;
+  if (entry && typeof entry === "object" && "arrayBuffer" in entry) {
+    const blob = entry as Blob;
+    if (blob.size > 0) {
+      file =
+        typeof File !== "undefined" && entry instanceof File
+          ? entry
+          : new File([blob], "profile.jpg", {
+              type: blob.type || "image/jpeg",
+            });
+    }
+  }
+
+  if (!file) {
     return { ok: false, error: "Choose a photo to upload." };
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("users")
     .select("username, profile_photo")
     .eq("id", user.id)
     .maybeSingle();
+
+  if (profileError) {
+    return {
+      ok: false,
+      error:
+        "Profile photos aren’t set up yet. Run supabase/profile_photos.sql in the Supabase SQL Editor.",
+    };
+  }
 
   const result = await uploadProfilePhoto(
     supabase,
