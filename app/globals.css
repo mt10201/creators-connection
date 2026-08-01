@@ -171,6 +171,21 @@ body {
   }
 }
 
+/* Slow wash between parchment and soft terracotta — unread bell only. */
+@keyframes bell-warm-pulse {
+  0%,
+  100% {
+    background-color: color-mix(in srgb, var(--color-terracotta-soft) 40%, var(--color-cream));
+    border-color: color-mix(in srgb, var(--color-terracotta) 35%, transparent);
+    color: var(--color-terracotta-deep);
+  }
+  50% {
+    background-color: color-mix(in srgb, var(--color-terracotta-soft) 75%, var(--color-cream));
+    border-color: color-mix(in srgb, var(--color-terracotta) 55%, transparent);
+    color: var(--color-terracotta);
+  }
+}
+
 .animate-fade-in {
   animation: fade-in 0.25s ease-out;
 }
@@ -181,6 +196,10 @@ body {
 
 .animate-spin-slow {
   animation: spin 0.7s linear infinite;
+}
+
+.animate-bell-pulse {
+  animation: bell-warm-pulse 3.2s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -195,6 +214,10 @@ body {
 
   .skeleton::after {
     display: none;
+  }
+
+  .animate-bell-pulse {
+    animation: none !important;
   }
 }
 

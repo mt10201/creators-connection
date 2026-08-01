@@ -96,12 +96,19 @@ export default async function Navbar() {
                   without opening the menu. Desktop sees it too. */}
               <NotificationBell unreadCount={unreadNotifications} />
               <div className="hidden items-center gap-3 sm:flex">
-                <span className="flex items-center gap-2 text-sm text-ink">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-sand font-display text-xs font-semibold uppercase text-terracotta-deep">
+                <Link
+                  href="/settings"
+                  aria-label={`Account settings for ${displayName}`}
+                  title="Account settings"
+                  className="group flex min-h-10 items-center gap-2 rounded-full py-1 text-sm text-ink transition duration-200 hover:text-terracotta"
+                >
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-sand font-display text-xs font-semibold uppercase text-terracotta-deep transition duration-200 group-hover:bg-terracotta-soft">
                     {displayName.charAt(0)}
                   </span>
-                  <span className="max-w-[9rem] truncate">{displayName}</span>
-                </span>
+                  <span className="max-w-[9rem] truncate underline-offset-4 group-hover:underline">
+                    {displayName}
+                  </span>
+                </Link>
                 <span
                   title={`${creditBalance} credits`}
                   className="rounded-full border border-ochre/30 bg-ochre/10 px-2.5 py-1 text-xs font-semibold text-ochre"
@@ -148,14 +155,23 @@ export default async function Navbar() {
             <nav className="animate-fade-in absolute right-0 top-full mt-3 w-64 overflow-hidden rounded-2xl border border-sand bg-cream py-2 shadow-lift">
               {isLoggedIn && (
                 <div className="border-b border-sand px-4 pb-3 pt-2">
-                  <div className="flex items-center gap-2.5">
+                  <Link
+                    href="/settings"
+                    aria-label={`Account settings for ${displayName}`}
+                    className="flex items-center gap-2.5 rounded-xl py-1 transition duration-200 hover:text-terracotta"
+                  >
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sand font-display text-xs font-semibold uppercase text-terracotta-deep">
                       {displayName.charAt(0)}
                     </span>
-                    <span className="truncate text-sm text-ink">
-                      {displayName}
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium text-ink underline-offset-4 hover:underline">
+                        {displayName}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-ink-faint">
+                        Account settings →
+                      </span>
                     </span>
-                  </div>
+                  </Link>
                   <span className="mt-2.5 inline-flex rounded-full border border-ochre/30 bg-ochre/10 px-2.5 py-1 text-xs font-semibold text-ochre">
                     {creditBalance} {creditBalance === 1 ? "credit" : "credits"}
                   </span>

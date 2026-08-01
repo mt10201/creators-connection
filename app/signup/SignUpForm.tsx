@@ -4,6 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { validateNewPassword } from "@/lib/password";
+import {
+  USERNAME_HINT,
+  normalizeUsername,
+  validateUsername,
+} from "@/lib/username";
 import Spinner from "@/app/components/Spinner";
 
 export default function SignUpForm() {
@@ -21,22 +27,16 @@ export default function SignUpForm() {
     setError(null);
     setSuccess(null);
 
-    const trimmedUsername = username.trim();
-
-    if (!/^[a-zA-Z0-9_]{3,24}$/.test(trimmedUsername)) {
-      setError(
-        "Username must be 3–24 characters, using letters, numbers, or underscores."
-      );
+    const trimmedUsername = normalizeUsername(username);
+    const usernameError = validateUsername(trimmedUsername);
+    if (usernameError) {
+      setError(usernameError);
       return;
     }
 
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+    const passwordError = validateNewPassword(password, confirmPassword);
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
 
@@ -129,7 +129,7 @@ export default function SignUpForm() {
                 className="form-input"
               />
               <p id="username-hint" className="form-hint">
-                3–24 characters — letters, numbers, or underscores.
+                {USERNAME_HINT}
               </p>
             </div>
 
