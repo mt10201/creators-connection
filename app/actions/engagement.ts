@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { trackEvent, type AnalyticsEventName } from "@/lib/analytics";
 import { createClient } from "@/lib/supabase/server";
 
 export type ToggleResult =
@@ -10,6 +11,7 @@ export type ToggleResult =
 async function toggle(
   table: "likes" | "saves",
   countColumn: "like_count" | "save_count",
+  eventName: AnalyticsEventName,
   postId: string
 ): Promise<ToggleResult> {
   const supabase = await createClient();
@@ -42,6 +44,12 @@ async function toggle(
       .from(table)
       .insert({ user_id: user.id, post_id: postId });
     if (error) return { ok: false, error: error.message };
+
+    await trackEvent(supabase, {
+      event_name: eventName,
+      user_id: user.id,
+      post_id: postId,
+    });
   }
 
   // Counts are maintained by database triggers, so read the value back.
@@ -63,9 +71,9 @@ async function toggle(
 }
 
 export async function toggleLike(postId: string) {
-  return toggle("likes", "like_count", postId);
+  return toggle("likes", "like_count", "post_like", postId);
 }
 
 export async function toggleSave(postId: string) {
-  return toggle("saves", "save_count", postId);
+  return toggle("saves", "save_count", "post_save", postId);
 }

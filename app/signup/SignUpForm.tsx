@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { trackEvent } from "@/lib/analytics";
 import { validateNewPassword } from "@/lib/password";
 import {
   USERNAME_HINT,
@@ -68,6 +69,11 @@ export default function SignUpForm() {
 
     // The public.users profile row is created by the on_auth_user_created
     // trigger, so there is nothing to insert here.
+
+    await trackEvent(supabase, {
+      event_name: "sign_up",
+      user_id: data.user.id,
+    });
 
     setSuccess("Account created successfully! Redirecting…");
     router.push("/explore");

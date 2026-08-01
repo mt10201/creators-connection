@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { trackEvent } from "@/lib/analytics";
 import { createClient } from "@/lib/supabase/server";
 
 const GENERIC_FAILURE =
@@ -54,6 +55,18 @@ export async function login(
           ? GENERIC_FAILURE
           : signInError.message,
     };
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    await trackEvent(supabase, {
+      event_name: "log_in",
+      user_id: user.id,
+      metadata: { method: looksLikeEmail(trimmed) ? "email" : "username" },
+    });
   }
 
   // Only allow same-origin paths so the query param can't be used as an open redirect.

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { trackEvent } from "@/lib/analytics";
 import type { ProductCategory } from "./categories";
 
 export const PRODUCT_IMAGES_BUCKET = "product-images";
@@ -232,7 +233,20 @@ export async function createPost(
     };
   }
 
-  return { ok: true, postId: data.id as string };
+  const postId = data.id as string;
+
+  await trackEvent(supabase, {
+    event_name: "post_upload",
+    user_id: userId,
+    post_id: postId,
+    metadata: {
+      category: post.category,
+      image_count: paths.length,
+      has_video: Boolean(videoPath),
+    },
+  });
+
+  return { ok: true, postId };
 }
 
 export type ExistingMedia = {

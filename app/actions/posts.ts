@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { trackEvent } from "@/lib/analytics";
 import { createClient } from "@/lib/supabase/server";
 import {
   PRODUCT_IMAGES_BUCKET,
@@ -80,6 +81,12 @@ export async function deletePost(postId: string): Promise<DeletePostResult> {
   if ((count ?? 0) === 0) {
     return { ok: false, error: "Could not delete that post. Please try again." };
   }
+
+  await trackEvent(supabase, {
+    event_name: "post_delete",
+    user_id: user.id,
+    post_id: postId,
+  });
 
   // Best effort: an orphaned file is preferable to a half-deleted post.
   const paths = storagePaths(post);
