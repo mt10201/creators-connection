@@ -2,7 +2,7 @@
 export const SITE_NAME = "Creators Connection";
 
 export const SITE_TITLE =
-  "Creators Connection — Share and discover independent maker products";
+  "Creators Connection — Share your products, find inspiration";
 
 export const SITE_DESCRIPTION =
   "Where independent makers share their products for inspiration and discovery.";
