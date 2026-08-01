@@ -42,6 +42,7 @@ end
 $$;
 
 alter table public.users add column if not exists username text;
+alter table public.users add column if not exists profile_photo text;
 
 -- Usernames are public identifiers, so they must be unique.
 create unique index if not exists users_username_key
@@ -73,9 +74,14 @@ create policy "Users can update own profile"
 -- credit balances. This view exposes only the safe columns. It runs with the
 -- owner's rights (the default), so it intentionally bypasses the row policies
 -- above rather than exposing the whole table.
--- credit_balance is shown on public profile pages; email stays private.
-create or replace view public.public_profiles as
-select id, username, profile_photo, credit_balance
+-- credit_balance stays off this view — only the owner reads it via users RLS.
+-- Drop first: create or replace cannot remove columns from an existing view.
+-- security_invoker = false keeps the view running as its owner so it can
+-- expose every profile despite users RLS (select-own-only).
+drop view if exists public.public_profiles;
+create view public.public_profiles
+with (security_invoker = false) as
+select id, username, profile_photo
 from public.users;
 
 grant select on public.public_profiles to anon, authenticated;

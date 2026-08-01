@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import Avatar from "@/app/components/Avatar";
 import PostActions from "@/app/components/PostActions";
 import DeletePostButton from "@/app/components/DeletePostButton";
 import ProductGallery from "./ProductGallery";
@@ -48,10 +49,11 @@ async function getPost(id: string) {
   }
 
   let creatorName: string | null = null;
+  let creatorPhoto: string | null = null;
   if (post.creator_id) {
     const { data: profile, error: profileError } = await supabase
       .from("public_profiles")
-      .select("username")
+      .select("username, profile_photo")
       .eq("id", post.creator_id)
       .maybeSingle();
 
@@ -60,11 +62,13 @@ async function getPost(id: string) {
     }
 
     creatorName = profile?.username?.trim() || null;
+    creatorPhoto = profile?.profile_photo?.trim() || null;
   }
 
   return {
     post,
     creatorName,
+    creatorPhoto,
     isLoggedIn: Boolean(user),
     isOwner: Boolean(user && post.creator_id === user.id),
     liked,
@@ -90,7 +94,8 @@ export default async function ProductPage({ params }: Props) {
 
   if (!result) notFound();
 
-  const { post, creatorName, isLoggedIn, isOwner, liked, saved } = result;
+  const { post, creatorName, creatorPhoto, isLoggedIn, isOwner, liked, saved } =
+    result;
   const images = (post.media_urls ?? []).filter(Boolean) as string[];
   const videoUrl = post.video_url ?? null;
   const postedOn = post.created_at
@@ -142,14 +147,12 @@ export default async function ProductPage({ params }: Props) {
               {post.product_title ?? "Untitled product"}
             </h1>
 
-            {/* Creator gets a monogram so attribution reads as a person, not a byline. */}
             <div className="mt-5 flex items-center gap-3">
-              <span
-                aria-hidden
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-clay bg-terracotta-soft font-display text-sm font-semibold uppercase text-terracotta-deep"
-              >
-                {(creatorName ?? "?").charAt(0)}
-              </span>
+              <Avatar
+                name={creatorName}
+                photoUrl={creatorPhoto}
+                size="md"
+              />
               <div className="min-w-0">
                 {creatorName ? (
                   <Link

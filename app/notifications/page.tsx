@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatRelativeTime, loadNotifications } from "@/lib/notifications";
+import Avatar from "@/app/components/Avatar";
 import EmptyState from "@/app/components/EmptyState";
 import MarkNotificationsRead from "./MarkNotificationsRead";
 
@@ -68,12 +69,11 @@ export default async function NotificationsPage() {
                     item.read ? "" : "bg-terracotta-soft/25"
                   }`}
                 >
-                  <span
-                    aria-hidden
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-clay bg-parchment font-display text-sm font-semibold uppercase text-terracotta-deep"
-                  >
-                    {item.actorName?.charAt(0) ?? "?"}
-                  </span>
+                  <Avatar
+                    name={item.actorName}
+                    photoUrl={item.actorPhoto}
+                    size="md"
+                  />
 
                   <div className="min-w-0 flex-1">
                     <p className="text-sm leading-relaxed text-ink">

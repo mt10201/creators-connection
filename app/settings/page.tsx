@@ -21,7 +21,7 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from("users")
-    .select("username, credit_balance")
+    .select("username, credit_balance, profile_photo")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -31,6 +31,7 @@ export default async function SettingsPage() {
     "";
   const email = user.email?.trim() || "—";
   const credits = profile?.credit_balance ?? 0;
+  const photoUrl = profile?.profile_photo?.trim() || null;
   const profileHref = username
     ? `/profile/${encodeURIComponent(username)}`
     : null;
@@ -53,6 +54,7 @@ export default async function SettingsPage() {
         <div className="mx-auto max-w-xl">
           <SettingsForms
             initialUsername={username}
+            initialPhotoUrl={photoUrl}
             email={email}
             credits={credits}
             profileHref={profileHref}

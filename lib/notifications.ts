@@ -8,6 +8,7 @@ export type NotificationItem = {
   read: boolean;
   createdAt: string;
   actorName: string | null;
+  actorPhoto: string | null;
   postId: string | null;
   postTitle: string | null;
 };
@@ -67,16 +68,22 @@ export async function loadNotifications(
   ] as string[];
 
   const [{ data: actors }, { data: posts }] = await Promise.all([
-    supabase.from("public_profiles").select("id, username").in("id", actorIds),
+    supabase
+      .from("public_profiles")
+      .select("id, username, profile_photo")
+      .in("id", actorIds),
     postIds.length > 0
       ? supabase.from("posts").select("id, product_title").in("id", postIds)
       : Promise.resolve({ data: [] }),
   ]);
 
   const actorNames = new Map<string, string>();
+  const actorPhotos = new Map<string, string>();
   for (const actor of actors ?? []) {
     const name = actor.username?.trim();
     if (name) actorNames.set(actor.id, name);
+    const photo = actor.profile_photo?.trim();
+    if (photo) actorPhotos.set(actor.id, photo);
   }
 
   const postTitles = new Map<string, string>();
@@ -90,6 +97,7 @@ export async function loadNotifications(
     read: row.read as boolean,
     createdAt: row.created_at as string,
     actorName: actorNames.get(row.actor_id as string) ?? null,
+    actorPhoto: actorPhotos.get(row.actor_id as string) ?? null,
     postId: (row.post_id as string | null) ?? null,
     postTitle: row.post_id
       ? (postTitles.get(row.post_id as string) ?? null)

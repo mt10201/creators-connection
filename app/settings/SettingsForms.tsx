@@ -1,21 +1,28 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { changePassword, updateUsername } from "@/app/actions/settings";
+import {
+  clearProfilePhoto,
+  updateProfilePhoto,
+} from "@/app/actions/profile-photo";
 import {
   USERNAME_HINT,
   normalizeUsername,
   validateUsername,
 } from "@/lib/username";
 import { validateNewPassword } from "@/lib/password";
+import { validateProfilePhoto } from "@/lib/profile-photo";
+import Avatar from "@/app/components/Avatar";
 import Spinner from "@/app/components/Spinner";
 
 type Tab = "profile" | "password";
 
 type Props = {
   initialUsername: string;
+  initialPhotoUrl: string | null;
   email: string;
   credits: number;
   profileHref: string | null;
@@ -23,6 +30,7 @@ type Props = {
 
 export default function SettingsForms({
   initialUsername,
+  initialPhotoUrl,
   email,
   credits,
   profileHref,
@@ -99,7 +107,10 @@ export default function SettingsForms({
 
         <div className="mt-5" role="tabpanel">
           {tab === "profile" ? (
-            <UsernameForm initialUsername={initialUsername} />
+            <ProfileForm
+              initialUsername={initialUsername}
+              initialPhotoUrl={initialPhotoUrl}
+            />
           ) : (
             <PasswordForm />
           )}
@@ -109,14 +120,23 @@ export default function SettingsForms({
   );
 }
 
-function UsernameForm({ initialUsername }: { initialUsername: string }) {
+function ProfileForm({
+  initialUsername,
+  initialPhotoUrl,
+}: {
+  initialUsername: string;
+  initialPhotoUrl: string | null;
+}) {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [username, setUsername] = useState(initialUsername);
+  const [photoUrl, setPhotoUrl] = useState(initialPhotoUrl);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [photoPending, startPhotoTransition] = useTransition();
 
-  function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function onUsernameSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setSuccess(null);
@@ -139,41 +159,130 @@ function UsernameForm({ initialUsername }: { initialUsername: string }) {
     });
   }
 
+  function onPhotoSelected(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    const validationError = validateProfilePhoto(file);
+    if (validationError) {
+      setError(validationError);
+      setSuccess(null);
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+
+    const formData = new FormData();
+    formData.set("photo", file);
+
+    startPhotoTransition(async () => {
+      const result = await updateProfilePhoto(formData);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setPhotoUrl(result.url);
+      setSuccess("Profile photo updated.");
+      router.refresh();
+    });
+  }
+
+  function onRemovePhoto() {
+    setError(null);
+    setSuccess(null);
+
+    startPhotoTransition(async () => {
+      const result = await clearProfilePhoto();
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setPhotoUrl(null);
+      setSuccess("Profile photo removed.");
+      router.refresh();
+    });
+  }
+
+  const busy = pending || photoPending;
+
   return (
-    <form className="space-y-4" onSubmit={onSubmit}>
-      <div>
-        <label htmlFor="settings-username" className="form-label">
-          Username
-        </label>
-        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-start">
-          <input
-            id="settings-username"
-            name="username"
-            type="text"
-            autoComplete="username"
-            required
-            minLength={3}
-            maxLength={24}
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            disabled={pending}
-            aria-invalid={Boolean(error) || undefined}
-            aria-describedby="settings-username-hint"
-            className="form-input mt-0 sm:flex-1"
-          />
-          <button
-            type="submit"
-            disabled={pending}
-            className="btn-primary shrink-0 sm:min-w-[8.5rem]"
-          >
-            {pending && <Spinner />}
-            {pending ? "Saving…" : "Save"}
-          </button>
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <Avatar name={username || "Creator"} photoUrl={photoUrl} size="lg" />
+        <div className="min-w-0">
+          <p className="form-label">Profile picture</p>
+          <p className="mt-1 text-xs text-ink-muted">
+            Square images work best. Max 2 MB.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={onPhotoSelected}
+              disabled={busy}
+            />
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => fileInputRef.current?.click()}
+              className="btn-primary"
+            >
+              {photoPending && <Spinner />}
+              {photoUrl ? "Replace photo" : "Upload photo"}
+            </button>
+            {photoUrl && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onRemovePhoto}
+                className="btn-secondary"
+              >
+                Remove
+              </button>
+            )}
+          </div>
         </div>
-        <p id="settings-username-hint" className="form-hint">
-          {USERNAME_HINT}
-        </p>
       </div>
+
+      <form className="space-y-4 border-t border-sand pt-5" onSubmit={onUsernameSubmit}>
+        <div>
+          <label htmlFor="settings-username" className="form-label">
+            Username
+          </label>
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-start">
+            <input
+              id="settings-username"
+              name="username"
+              type="text"
+              autoComplete="username"
+              required
+              minLength={3}
+              maxLength={24}
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              disabled={busy}
+              aria-invalid={Boolean(error) || undefined}
+              aria-describedby="settings-username-hint"
+              className="form-input mt-0 sm:flex-1"
+            />
+            <button
+              type="submit"
+              disabled={busy}
+              className="btn-primary shrink-0 sm:min-w-[8.5rem]"
+            >
+              {pending && <Spinner />}
+              {pending ? "Saving…" : "Save"}
+            </button>
+          </div>
+          <p id="settings-username-hint" className="form-hint">
+            {USERNAME_HINT}
+          </p>
+        </div>
+      </form>
 
       {error && (
         <p role="alert" className="form-alert-error">
@@ -185,7 +294,7 @@ function UsernameForm({ initialUsername }: { initialUsername: string }) {
           {success}
         </p>
       )}
-    </form>
+    </div>
   );
 }
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { countUnreadNotifications } from "@/lib/notifications";
+import Avatar from "./Avatar";
 import LogoutButton from "./LogoutButton";
 import NotificationBell from "./NotificationBell";
 
@@ -24,7 +25,7 @@ async function getViewer() {
   const [{ data: profile }, unreadNotifications] = await Promise.all([
     supabase
       .from("users")
-      .select("username, credit_balance")
+      .select("username, credit_balance, profile_photo")
       .eq("id", user.id)
       .maybeSingle(),
     countUnreadNotifications(supabase, user.id).catch((error) => {
@@ -40,6 +41,7 @@ async function getViewer() {
       user.email ||
       "Creator",
     creditBalance: profile?.credit_balance ?? 0,
+    photoUrl: profile?.profile_photo?.trim() || null,
     unreadNotifications,
   };
 }
@@ -55,6 +57,7 @@ export default async function Navbar() {
   const isLoggedIn = viewer !== null;
   const displayName = viewer?.displayName ?? "";
   const creditBalance = viewer?.creditBalance ?? 0;
+  const photoUrl = viewer?.photoUrl ?? null;
   const unreadNotifications = viewer?.unreadNotifications ?? 0;
 
   return (
@@ -102,9 +105,12 @@ export default async function Navbar() {
                   title="Account settings"
                   className="group flex min-h-10 items-center gap-2 rounded-full py-1 text-sm text-ink transition duration-200 hover:text-terracotta"
                 >
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-sand font-display text-xs font-semibold uppercase text-terracotta-deep transition duration-200 group-hover:bg-terracotta-soft">
-                    {displayName.charAt(0)}
-                  </span>
+                  <Avatar
+                    name={displayName}
+                    photoUrl={photoUrl}
+                    size="sm"
+                    className="transition duration-200 group-hover:border-terracotta/40"
+                  />
                   <span className="max-w-[9rem] truncate underline-offset-4 group-hover:underline">
                     {displayName}
                   </span>
@@ -160,9 +166,7 @@ export default async function Navbar() {
                     aria-label={`Account settings for ${displayName}`}
                     className="flex items-center gap-2.5 rounded-xl py-1 transition duration-200 hover:text-terracotta"
                   >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sand font-display text-xs font-semibold uppercase text-terracotta-deep">
-                      {displayName.charAt(0)}
-                    </span>
+                    <Avatar name={displayName} photoUrl={photoUrl} size="md" />
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-medium text-ink underline-offset-4 hover:underline">
                         {displayName}

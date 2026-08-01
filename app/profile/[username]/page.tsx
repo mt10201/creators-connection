@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import ProductCard, {
   type ProductCardPost,
 } from "@/app/components/ProductCard";
+import Avatar from "@/app/components/Avatar";
 import EmptyState from "@/app/components/EmptyState";
 import OnboardingSteps, {
   firstPostSteps,
@@ -12,9 +13,63 @@ import OnboardingSteps, {
 
 type Props = { params: Promise<{ username: string }> };
 
+type PublicProfile = {
+  id: string;
+  username: string | null;
+  profile_photo: string | null;
+};
+
 /** `_` and `%` are LIKE wildcards, and usernames may legitimately contain `_`. */
 function escapeLikePattern(value: string) {
   return value.replace(/[\\%_]/g, (char) => `\\${char}`);
+}
+
+async function loadProfileRows(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  username: string
+): Promise<{ rows: PublicProfile[]; errorMessage?: string }> {
+  // Prefer the photo column; fall back if the migration hasn't been applied yet
+  // so profiles keep loading instead of 404ing.
+  const withPhoto = await supabase
+    .from("public_profiles")
+    .select("id, username, profile_photo")
+    .ilike("username", escapeLikePattern(username))
+    .order("username", { ascending: true })
+    .limit(10);
+
+  if (!withPhoto.error) {
+    return {
+      rows: (withPhoto.data ?? []).map((row) => ({
+        id: row.id as string,
+        username: (row.username as string | null) ?? null,
+        profile_photo:
+          typeof row.profile_photo === "string" && row.profile_photo.trim()
+            ? row.profile_photo.trim()
+            : null,
+      })),
+    };
+  }
+
+  console.error("Profile lookup (with photo) failed:", withPhoto.error.message);
+
+  const withoutPhoto = await supabase
+    .from("public_profiles")
+    .select("id, username")
+    .ilike("username", escapeLikePattern(username))
+    .order("username", { ascending: true })
+    .limit(10);
+
+  if (withoutPhoto.error) {
+    return { rows: [], errorMessage: withoutPhoto.error.message };
+  }
+
+  return {
+    rows: (withoutPhoto.data ?? []).map((row) => ({
+      id: row.id as string,
+      username: (row.username as string | null) ?? null,
+      profile_photo: null,
+    })),
+  };
 }
 
 async function getProfile(rawUsername: string) {
@@ -22,26 +77,16 @@ async function getProfile(rawUsername: string) {
   if (!username) return null;
 
   const supabase = await createClient();
+  const { rows, errorMessage } = await loadProfileRows(supabase, username);
 
-  // Fetch candidates rather than a single row: a case-insensitive match can
-  // legitimately return more than one, and maybeSingle() errors on that.
-  const { data: matches, error: profileError } = await supabase
-    .from("public_profiles")
-    .select("id, username, credit_balance")
-    .ilike("username", escapeLikePattern(username))
-    .order("username", { ascending: true })
-    .limit(10);
-
-  if (profileError) {
-    console.error("Profile lookup failed:", profileError.message);
+  if (errorMessage) {
+    console.error("Profile lookup failed:", errorMessage);
     return null;
   }
 
   const target = username.toLowerCase();
   const profile =
-    (matches ?? []).find(
-      (row) => row.username?.trim().toLowerCase() === target
-    ) ?? null;
+    rows.find((row) => row.username?.trim().toLowerCase() === target) ?? null;
 
   if (!profile) return null;
 
@@ -76,12 +121,24 @@ export default async function ProfilePage({ params }: Props) {
   if (!result) notFound();
 
   const { profile, posts } = result;
-  const credits = profile.credit_balance ?? 0;
 
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  const isOwnProfile = user?.id === profile.id;
+
+  // Credits are private: only the owner reads them from their own users row.
+  let credits: number | null = null;
+  if (isOwnProfile && user) {
+    const { data: ownProfile } = await supabase
+      .from("users")
+      .select("credit_balance")
+      .eq("id", user.id)
+      .maybeSingle();
+    credits = ownProfile?.credit_balance ?? 0;
+  }
 
   const postIds = posts.map((post) => post.id);
   const likedIds = new Set<string>();
@@ -105,27 +162,28 @@ export default async function ProfilePage({ params }: Props) {
     for (const row of saves ?? []) savedIds.add(row.post_id);
   }
 
-  const isOwnProfile = user?.id === profile.id;
-
   return (
     <div>
       {/* Profile header */}
       <section className="px-5 pb-8 pt-14 sm:px-8 sm:pt-16">
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
-            {/* Circular monogram in a warm mat — a maker's stamp, not an avatar chip. */}
-            <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border border-clay bg-terracotta-soft font-display text-2xl font-semibold uppercase text-terracotta-deep">
-              {profile.username?.charAt(0) ?? "?"}
-            </span>
+            <Avatar
+              name={profile.username}
+              photoUrl={profile.profile_photo ?? null}
+              size="lg"
+            />
             <div>
               <span className="eyebrow text-sage">Creator</span>
               <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight sm:text-5xl">
                 {profile.username}
               </h1>
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-ochre/30 bg-ochre/10 px-3 py-1 text-xs font-semibold text-ochre">
-                  {credits} {credits === 1 ? "credit" : "credits"}
-                </span>
+                {credits !== null && (
+                  <span className="rounded-full border border-ochre/30 bg-ochre/10 px-3 py-1 text-xs font-semibold text-ochre">
+                    {credits} {credits === 1 ? "credit" : "credits"}
+                  </span>
+                )}
                 <span className="rounded-full border border-sand bg-parchment px-3 py-1 text-xs font-semibold text-ink-muted">
                   {posts.length} {posts.length === 1 ? "product" : "products"}
                 </span>
