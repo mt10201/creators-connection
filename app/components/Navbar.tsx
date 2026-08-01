@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { countUnreadNotifications } from "@/lib/notifications";
 import LogoutButton from "./LogoutButton";
+import NotificationBell from "./NotificationBell";
 
 const navLinks = [
   { href: "/explore", label: "Explore" },
@@ -17,11 +19,19 @@ async function getViewer() {
 
   if (!user) return null;
 
-  const { data: profile } = await supabase
-    .from("users")
-    .select("username, credit_balance")
-    .eq("id", user.id)
-    .maybeSingle();
+  // Profile and unread count are independent: a notifications failure must not
+  // hide the rest of the signed-in chrome (including the bell itself).
+  const [{ data: profile }, unreadNotifications] = await Promise.all([
+    supabase
+      .from("users")
+      .select("username, credit_balance")
+      .eq("id", user.id)
+      .maybeSingle(),
+    countUnreadNotifications(supabase, user.id).catch((error) => {
+      console.error("Failed to count notifications:", error);
+      return 0;
+    }),
+  ]);
 
   return {
     displayName:
@@ -30,6 +40,7 @@ async function getViewer() {
       user.email ||
       "Creator",
     creditBalance: profile?.credit_balance ?? 0,
+    unreadNotifications,
   };
 }
 
@@ -44,6 +55,7 @@ export default async function Navbar() {
   const isLoggedIn = viewer !== null;
   const displayName = viewer?.displayName ?? "";
   const creditBalance = viewer?.creditBalance ?? 0;
+  const unreadNotifications = viewer?.unreadNotifications ?? 0;
 
   return (
     <header className="sticky top-0 z-50 border-b border-sand/80 bg-cream/85 backdrop-blur-md">
@@ -79,21 +91,26 @@ export default async function Navbar() {
 
         <div className="flex items-center gap-3">
           {isLoggedIn ? (
-            <div className="hidden items-center gap-3 sm:flex">
-              <span className="flex items-center gap-2 text-sm text-ink">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-sand font-display text-xs font-semibold uppercase text-terracotta-deep">
-                  {displayName.charAt(0)}
+            <>
+              {/* Bell stays outside the sm-only profile cluster so mobile sees it
+                  without opening the menu. Desktop sees it too. */}
+              <NotificationBell unreadCount={unreadNotifications} />
+              <div className="hidden items-center gap-3 sm:flex">
+                <span className="flex items-center gap-2 text-sm text-ink">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-sand font-display text-xs font-semibold uppercase text-terracotta-deep">
+                    {displayName.charAt(0)}
+                  </span>
+                  <span className="max-w-[9rem] truncate">{displayName}</span>
                 </span>
-                <span className="max-w-[9rem] truncate">{displayName}</span>
-              </span>
-              <span
-                title={`${creditBalance} credits`}
-                className="rounded-full border border-ochre/30 bg-ochre/10 px-2.5 py-1 text-xs font-semibold text-ochre"
-              >
-                {creditBalance} {creditBalance === 1 ? "credit" : "credits"}
-              </span>
-              <LogoutButton />
-            </div>
+                <span
+                  title={`${creditBalance} credits`}
+                  className="rounded-full border border-ochre/30 bg-ochre/10 px-2.5 py-1 text-xs font-semibold text-ochre"
+                >
+                  {creditBalance} {creditBalance === 1 ? "credit" : "credits"}
+                </span>
+                <LogoutButton />
+              </div>
+            </>
           ) : (
             <div className="hidden items-center gap-4 sm:flex">
               <Link href="/login" className={linkClass}>
@@ -159,6 +176,17 @@ export default async function Navbar() {
                 <>
                   <Link href="/dashboard" className={mobileLinkClass}>
                     Dashboard
+                  </Link>
+                  <Link
+                    href="/notifications"
+                    className={`${mobileLinkClass} justify-between gap-3`}
+                  >
+                    Notifications
+                    {unreadNotifications > 0 && (
+                      <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-terracotta px-1.5 py-0.5 text-[0.625rem] font-semibold leading-none text-cream">
+                        {unreadNotifications > 9 ? "9+" : unreadNotifications}
+                      </span>
+                    )}
                   </Link>
                   <Link href="/upload" className={mobileLinkClass}>
                     Upload
