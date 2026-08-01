@@ -129,17 +129,6 @@ export default async function ProfilePage({ params }: Props) {
 
   const isOwnProfile = user?.id === profile.id;
 
-  // Credits are private: only the owner reads them from their own users row.
-  let credits: number | null = null;
-  if (isOwnProfile && user) {
-    const { data: ownProfile } = await supabase
-      .from("users")
-      .select("credit_balance")
-      .eq("id", user.id)
-      .maybeSingle();
-    credits = ownProfile?.credit_balance ?? 0;
-  }
-
   const postIds = posts.map((post) => post.id);
   const likedIds = new Set<string>();
   const savedIds = new Set<string>();
@@ -179,11 +168,6 @@ export default async function ProfilePage({ params }: Props) {
                 {profile.username}
               </h1>
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                {credits !== null && (
-                  <span className="rounded-full border border-ochre/30 bg-ochre/10 px-3 py-1 text-xs font-semibold text-ochre">
-                    {credits} {credits === 1 ? "credit" : "credits"}
-                  </span>
-                )}
                 <span className="rounded-full border border-sand bg-parchment px-3 py-1 text-xs font-semibold text-ink-muted">
                   {posts.length} {posts.length === 1 ? "product" : "products"}
                 </span>
