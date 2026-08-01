@@ -88,9 +88,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = rawDescription
     ? truncateMeta(rawDescription)
     : `Discover ${title} on Creators Connection.`;
-  const image = (result.post.media_urls ?? []).find(
-    (url): url is string => typeof url === "string" && url.trim().length > 0
-  );
+  const image = ((result.post.media_urls ?? []) as unknown[])
+    .find((url): url is string => typeof url === "string" && url.trim().length > 0);
   const path = `/products/${id}`;
 
   const shareTitle = `${title} | ${SITE_NAME}`;

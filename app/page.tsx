@@ -1,19 +1,45 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SITE_DESCRIPTION, SITE_NAME } from "@/lib/site";
+import {
+  getDefaultOgImageUrl,
+  getSiteUrl,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_TITLE,
+} from "@/lib/site";
+
+const ogImageUrl = getDefaultOgImageUrl();
+const siteUrl = getSiteUrl().toString();
 
 export const metadata: Metadata = {
   title: {
-    absolute: SITE_NAME,
+    absolute: SITE_TITLE,
   },
   description: SITE_DESCRIPTION,
-  openGraph: {
-    title: SITE_NAME,
-    description: SITE_DESCRIPTION,
-    url: "/",
-  },
   alternates: {
     canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    siteName: SITE_NAME,
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    url: siteUrl,
+    images: [
+      {
+        url: ogImageUrl,
+        width: 1200,
+        height: 630,
+        alt: SITE_NAME,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: [ogImageUrl],
   },
 };
 

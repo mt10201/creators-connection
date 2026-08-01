@@ -1,12 +1,15 @@
 /** Shared site identity for metadata and Open Graph. */
 export const SITE_NAME = "Creators Connection";
 
+export const SITE_TITLE =
+  "Creators Connection — Share and discover independent maker products";
+
 export const SITE_DESCRIPTION =
   "Where independent makers share their products for inspiration and discovery.";
 
 /**
  * Absolute origin used by metadataBase so relative OG/canonical URLs resolve.
- * Prefer NEXT_PUBLIC_SITE_URL in production (e.g. https://creatorsconnection.com).
+ * Prefer NEXT_PUBLIC_SITE_URL in production (e.g. https://www.creators-connection.com).
  */
 export function getSiteUrl(): URL {
   const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim();
@@ -16,6 +19,11 @@ export function getSiteUrl(): URL {
   if (vercel) return new URL(`https://${vercel}`);
 
   return new URL("http://localhost:3000");
+}
+
+/** Absolute URL for the App Router opengraph-image route. */
+export function getDefaultOgImageUrl(): string {
+  return new URL("/opengraph-image", getSiteUrl()).toString();
 }
 
 /** Collapse whitespace and cap length for meta descriptions. */

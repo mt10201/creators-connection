@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { DM_Sans, Fraunces } from "next/font/google";
-import { getSiteUrl, SITE_DESCRIPTION, SITE_NAME } from "@/lib/site";
+import {
+  getDefaultOgImageUrl,
+  getSiteUrl,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_TITLE,
+} from "@/lib/site";
 import Navbar from "./components/Navbar";
 import "./globals.css";
 
@@ -19,10 +25,12 @@ const fraunces = Fraunces({
   style: ["normal", "italic"],
 });
 
+const ogImageUrl = getDefaultOgImageUrl();
+
 export const metadata: Metadata = {
   metadataBase: getSiteUrl(),
   title: {
-    default: SITE_NAME,
+    default: SITE_TITLE,
     template: `%s | ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
@@ -31,13 +39,22 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     siteName: SITE_NAME,
-    title: SITE_NAME,
+    title: SITE_TITLE,
     description: SITE_DESCRIPTION,
+    images: [
+      {
+        url: ogImageUrl,
+        width: 1200,
+        height: 630,
+        alt: SITE_NAME,
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: SITE_NAME,
+    title: SITE_TITLE,
     description: SITE_DESCRIPTION,
+    images: [ogImageUrl],
   },
 };
 
