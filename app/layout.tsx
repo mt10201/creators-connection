@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { DM_Sans, Fraunces } from "next/font/google";
+import { getSiteUrl, SITE_DESCRIPTION, SITE_NAME } from "@/lib/site";
 import Navbar from "./components/Navbar";
 import "./globals.css";
 
@@ -19,9 +20,25 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Creators Connection",
-  description:
-    "Where independent makers share their products for inspiration and discovery.",
+  metadataBase: getSiteUrl(),
+  title: {
+    default: SITE_NAME,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    siteName: SITE_NAME,
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+  },
 };
 
 const footerLinks = [

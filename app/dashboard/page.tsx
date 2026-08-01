@@ -17,7 +17,7 @@ import DashboardTabs, {
 } from "./DashboardTabs";
 
 export const metadata: Metadata = {
-  title: "Dashboard | Creators Connection",
+  title: "Dashboard",
   description:
     "Your credits, posts, likes, and saved products at a glance.",
 };

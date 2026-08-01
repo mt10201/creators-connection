@@ -8,7 +8,7 @@ import EmptyState from "@/app/components/EmptyState";
 import MarkNotificationsRead from "./MarkNotificationsRead";
 
 export const metadata: Metadata = {
-  title: "Notifications | Creators Connection",
+  title: "Notifications",
   description: "Likes and saves on the work you've shared.",
 };
 

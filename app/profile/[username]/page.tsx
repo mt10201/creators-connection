@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { SITE_NAME } from "@/lib/site";
 import ProductCard, {
   type ProductCardPost,
 } from "@/app/components/ProductCard";
@@ -103,14 +104,35 @@ async function getProfile(rawUsername: string) {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { username } = await params;
-  const result = await getProfile(username);
+  const { username: rawUsername } = await params;
+  const result = await getProfile(rawUsername);
 
-  if (!result) return { title: "Creator not found | Creators Connection" };
+  if (!result) return { title: "Creator not found" };
+
+  const username = result.profile.username?.trim() || "Creator";
+  const description = `Products shared by ${username} on Creators Connection.`;
+  const shareTitle = `${username} | ${SITE_NAME}`;
+  const path = `/profile/${encodeURIComponent(username)}`;
+  const photo = result.profile.profile_photo;
 
   return {
-    title: `${result.profile.username} | Creators Connection`,
-    description: `Products shared by ${result.profile.username} on Creators Connection.`,
+    title: username,
+    description,
+    alternates: { canonical: path },
+    openGraph: {
+      type: "profile",
+      title: shareTitle,
+      description,
+      url: path,
+      username,
+      images: photo ? [{ url: photo }] : undefined,
+    },
+    twitter: {
+      card: photo ? "summary" : "summary_large_image",
+      title: shareTitle,
+      description,
+      images: photo ? [photo] : undefined,
+    },
   };
 }
 

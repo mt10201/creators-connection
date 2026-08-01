@@ -1,4 +1,21 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { SITE_DESCRIPTION, SITE_NAME } from "@/lib/site";
+
+export const metadata: Metadata = {
+  title: {
+    absolute: SITE_NAME,
+  },
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    url: "/",
+  },
+  alternates: {
+    canonical: "/",
+  },
+};
 
 const steps = [
   {

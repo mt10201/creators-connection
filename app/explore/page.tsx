@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { productCategories } from "@/lib/categories";
+import { SITE_NAME } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 import ProductCard from "@/app/components/ProductCard";
 import EmptyState from "@/app/components/EmptyState";
@@ -11,10 +12,20 @@ import OnboardingSteps, {
 import CategoryFilters from "@/app/components/CategoryFilters";
 import ExploreSearch from "@/app/components/ExploreSearch";
 
+const exploreDescription =
+  "Discover original work from independent creators — browse product posts for inspiration.";
+
 export const metadata: Metadata = {
-  title: "Explore | Creators Connection",
-  description:
-    "Discover original work from independent creators — browse product posts for inspiration.",
+  title: "Explore",
+  description: exploreDescription,
+  openGraph: {
+    title: `Explore | ${SITE_NAME}`,
+    description: exploreDescription,
+    url: "/explore",
+  },
+  alternates: {
+    canonical: "/explore",
+  },
 };
 
 const categories = ["All", ...productCategories] as const;

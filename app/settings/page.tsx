@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import SettingsForms from "./SettingsForms";
 
 export const metadata: Metadata = {
-  title: "Account Settings | Creators Connection",
+  title: "Account Settings",
   description: "Update your username and password.",
 };
 

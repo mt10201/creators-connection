@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import UploadForm from "./UploadForm";
 
 export const metadata: Metadata = {
-  title: "Upload Product | Creators Connection",
+  title: "Upload Product",
   description: "Share your work with the Creators Connection community.",
 };
 

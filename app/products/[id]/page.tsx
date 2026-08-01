@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { SITE_NAME, truncateMeta } from "@/lib/site";
 import Avatar from "@/app/components/Avatar";
 import PostActions from "@/app/components/PostActions";
 import DeletePostButton from "@/app/components/DeletePostButton";
@@ -80,11 +81,37 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const result = await getPost(id);
 
-  if (!result) return { title: "Product not found | Creators Connection" };
+  if (!result) return { title: "Product not found" };
+
+  const title = result.post.product_title?.trim() || "Product";
+  const rawDescription = result.post.description?.trim();
+  const description = rawDescription
+    ? truncateMeta(rawDescription)
+    : `Discover ${title} on Creators Connection.`;
+  const image = (result.post.media_urls ?? []).find(
+    (url): url is string => typeof url === "string" && url.trim().length > 0
+  );
+  const path = `/products/${id}`;
+
+  const shareTitle = `${title} | ${SITE_NAME}`;
 
   return {
-    title: `${result.post.product_title ?? "Product"} | Creators Connection`,
-    description: result.post.description ?? undefined,
+    title,
+    description,
+    alternates: { canonical: path },
+    openGraph: {
+      type: "website",
+      title: shareTitle,
+      description,
+      url: path,
+      images: image ? [{ url: image }] : undefined,
+    },
+    twitter: {
+      card: image ? "summary_large_image" : "summary",
+      title: shareTitle,
+      description,
+      images: image ? [image] : undefined,
+    },
   };
 }
 

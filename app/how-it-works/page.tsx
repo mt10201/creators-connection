@@ -1,10 +1,21 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { SITE_NAME } from "@/lib/site";
+
+const howItWorksDescription =
+  "Learn how Creators Connection works — create an account, post your products, browse for inspiration, and use credits to grow.";
 
 export const metadata: Metadata = {
-  title: "How It Works | Creators Connection",
-  description:
-    "Learn how Creators Connection works — create an account, post your products, browse for inspiration, and use credits to grow.",
+  title: "How It Works",
+  description: howItWorksDescription,
+  openGraph: {
+    title: `How It Works | ${SITE_NAME}`,
+    description: howItWorksDescription,
+    url: "/how-it-works",
+  },
+  alternates: {
+    canonical: "/how-it-works",
+  },
 };
 
 const postIncludes = [

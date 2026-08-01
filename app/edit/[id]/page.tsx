@@ -9,7 +9,7 @@ type Props = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   return {
-    title: "Edit Product | Creators Connection",
+    title: "Edit Product",
     description: `Edit your product post ${id}.`,
   };
 }

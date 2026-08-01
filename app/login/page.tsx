@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import LoginForm from "./LoginForm";
 
 export const metadata: Metadata = {
-  title: "Log In | Creators Connection",
+  title: "Log In",
   description:
     "Log in to continue sharing and discovering with independent makers.",
 };
