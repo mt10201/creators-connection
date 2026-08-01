@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Props = {
   href: string;
@@ -23,10 +23,49 @@ export default function ProductCardMedia({
   extraImages,
   priority = false,
 }: Props) {
+  const rootRef = useRef<HTMLAnchorElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const wantPlayRef = useRef(false);
   const hasVideo = Boolean(videoUrl);
+  // Defer attaching src until near the viewport (or first hover/focus).
+  const [loadVideo, setLoadVideo] = useState(false);
+
+  useEffect(() => {
+    if (!hasVideo) return;
+    const node = rootRef.current;
+    if (!node) return;
+
+    if (typeof IntersectionObserver === "undefined") {
+      setLoadVideo(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setLoadVideo(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "300px 0px" }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasVideo]);
+
+  useEffect(() => {
+    if (!loadVideo || !wantPlayRef.current) return;
+    const video = videoRef.current;
+    if (!video) return;
+    video.currentTime = 0;
+    void video.play().catch(() => {
+      // Autoplay can fail on some browsers; the still cover remains.
+    });
+  }, [loadVideo]);
 
   function playPreview() {
+    wantPlayRef.current = true;
+    setLoadVideo(true);
     const video = videoRef.current;
     if (!video) return;
     video.currentTime = 0;
@@ -36,6 +75,7 @@ export default function ProductCardMedia({
   }
 
   function stopPreview() {
+    wantPlayRef.current = false;
     const video = videoRef.current;
     if (!video) return;
     video.pause();
@@ -44,6 +84,7 @@ export default function ProductCardMedia({
 
   return (
     <Link
+      ref={rootRef}
       href={href}
       tabIndex={-1}
       aria-hidden
@@ -70,7 +111,7 @@ export default function ProductCardMedia({
         </div>
       )}
 
-      {hasVideo && videoUrl && (
+      {hasVideo && videoUrl && loadVideo && (
         <video
           ref={videoRef}
           src={videoUrl}
@@ -78,6 +119,7 @@ export default function ProductCardMedia({
           loop
           playsInline
           preload="metadata"
+          disablePictureInPicture
           className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-within:opacity-100"
         />
       )}

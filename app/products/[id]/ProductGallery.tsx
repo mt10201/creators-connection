@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Props = {
   images: string[];
@@ -13,11 +13,30 @@ export default function ProductGallery({ images, title, videoUrl }: Props) {
   // Video is index 0 when present; images follow.
   const hasVideo = Boolean(videoUrl);
   const [activeIndex, setActiveIndex] = useState(0);
+  const mainVideoRef = useRef<HTMLVideoElement>(null);
 
   const showingVideo = hasVideo && activeIndex === 0;
   const imageIndex = hasVideo ? activeIndex - 1 : activeIndex;
   const activeImage = images[imageIndex];
   const total = images.length + (hasVideo ? 1 : 0);
+
+  // Pause decoding while the tab is hidden; resume the same muted loop on return.
+  useEffect(() => {
+    if (!showingVideo) return;
+    const video = mainVideoRef.current;
+    if (!video) return;
+
+    const onVisibility = () => {
+      if (document.hidden) {
+        video.pause();
+      } else {
+        void video.play().catch(() => {});
+      }
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [showingVideo, videoUrl]);
 
   if (total === 0) {
     return (
@@ -34,12 +53,15 @@ export default function ProductGallery({ images, title, videoUrl }: Props) {
           {showingVideo && videoUrl ? (
             <video
               key={videoUrl}
+              ref={mainVideoRef}
               src={videoUrl}
               autoPlay
               muted
               loop
               playsInline
               controls={false}
+              preload="auto"
+              disablePictureInPicture
               className="absolute inset-0 h-full w-full animate-fade-in object-contain"
               aria-label={`${title} — short video`}
             />
@@ -84,6 +106,7 @@ export default function ProductGallery({ images, title, videoUrl }: Props) {
                     muted
                     playsInline
                     preload="metadata"
+                    disablePictureInPicture
                     className="absolute inset-0 h-full w-full object-cover"
                   />
                   <span className="absolute inset-0 flex items-center justify-center bg-ink/20">

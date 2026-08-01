@@ -186,7 +186,8 @@ export async function createPost(
   if (post.video) {
     videoPath = `${userId}/${crypto.randomUUID()}.${fileExtension(post.video)}`;
     const { error: videoError } = await storage.upload(videoPath, post.video, {
-      cacheControl: "3600",
+      // UUID paths are immutable; long cache cuts repeat-view bandwidth.
+      cacheControl: "31536000",
       upsert: false,
       contentType: post.video.type || "video/mp4",
     });
@@ -313,7 +314,8 @@ export async function updatePost(
       videoPath,
       input.newVideo,
       {
-        cacheControl: "3600",
+        // UUID paths are immutable; long cache cuts repeat-view bandwidth.
+        cacheControl: "31536000",
         upsert: false,
         contentType: input.newVideo.type || "video/mp4",
       }
