@@ -496,30 +496,28 @@ function DeleteAccountSection({ username }: { username: string }) {
   }
 
   return (
-    <div className="rounded-2xl border border-terracotta/25 bg-terracotta-soft/30 p-5 shadow-soft sm:p-6">
-      <span className="eyebrow text-terracotta-deep">Danger zone</span>
-      <h2 className="mt-2 font-display text-xl font-semibold tracking-tight">
-        Delete account
-      </h2>
-      <p className="mt-2 text-sm leading-relaxed text-ink-muted">
-        Permanently deletes your profile, posts, likes, saves, notifications,
-        and credits. This can’t be undone.
-      </p>
-
+    <div className="mt-14 border-t border-sand/80 pt-8">
       {!open ? (
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="btn-secondary mt-5 border-terracotta/30 text-terracotta-deep hover:border-terracotta/50 hover:bg-cream hover:text-terracotta-deep"
+          className="text-xs text-ink-faint underline-offset-4 transition duration-200 hover:text-ink-muted hover:underline"
         >
-          Delete my account…
+          Delete account
         </button>
       ) : (
-        <form className="mt-5 space-y-4" onSubmit={onSubmit}>
+        <form className="max-w-sm space-y-3" onSubmit={onSubmit}>
+          <p className="text-xs leading-relaxed text-ink-faint">
+            Permanently delete your account and all associated data. This can’t
+            be undone.
+          </p>
           <div>
-            <label htmlFor="delete-account-confirm" className="form-label">
+            <label
+              htmlFor="delete-account-confirm"
+              className="mb-1.5 block text-xs font-medium text-ink-muted"
+            >
               {hasUsername
-                ? "Type your username to confirm"
+                ? `Type “${username}” to confirm`
                 : "Type DELETE to confirm"}
             </label>
             <input
@@ -533,22 +531,30 @@ function DeleteAccountSection({ username }: { username: string }) {
               disabled={pending}
               placeholder={confirmLabel}
               aria-describedby="delete-account-hint"
-              className="form-input"
+              className="form-input py-2 text-sm"
             />
-            <p id="delete-account-hint" className="form-hint">
+            <p id="delete-account-hint" className="mt-1.5 text-[0.7rem] text-ink-faint">
               {hasUsername
-                ? `Enter “${username}” exactly. Your account will be removed immediately.`
-                : "Enter DELETE in all caps. Your account will be removed immediately."}
+                ? "Enter your username exactly."
+                : "Enter DELETE in all caps."}
             </p>
           </div>
 
           {error && (
-            <p role="alert" className="form-alert-error">
+            <p role="alert" className="form-alert-error text-xs">
               {error}
             </p>
           )}
 
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            <button
+              type="submit"
+              disabled={pending || !confirmation.trim()}
+              className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-sand bg-cream px-3.5 text-xs font-medium text-ink-muted transition duration-200 hover:border-terracotta/40 hover:text-terracotta-deep disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {pending && <Spinner />}
+              {pending ? "Deleting…" : "Delete account"}
+            </button>
             <button
               type="button"
               disabled={pending}
@@ -557,17 +563,9 @@ function DeleteAccountSection({ username }: { username: string }) {
                 setConfirmation("");
                 setError(null);
               }}
-              className="btn-secondary"
+              className="text-xs text-ink-faint underline-offset-4 hover:underline"
             >
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={pending || !confirmation.trim()}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-terracotta-deep px-5 text-sm font-medium text-cream shadow-soft transition duration-200 hover:bg-terracotta disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {pending && <Spinner />}
-              {pending ? "Deleting…" : "Permanently delete account"}
             </button>
           </div>
         </form>

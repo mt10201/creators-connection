@@ -11,6 +11,7 @@ import OnboardingSteps, {
 } from "@/app/components/OnboardingSteps";
 import CategoryFilters from "@/app/components/CategoryFilters";
 import ExploreSearch from "@/app/components/ExploreSearch";
+import ExploreBoostedSlots from "@/app/components/ExploreBoostedSlots";
 
 const exploreDescription =
   "Discover original work from independent creators — browse product posts for inspiration.";
@@ -158,6 +159,10 @@ export default async function ExplorePage({
     for (const row of saves ?? []) savedIds.add(row.post_id);
   }
 
+  // Positions 1–4 stay organic; boosted slots are inserted after them.
+  const leadPosts = posts.slice(0, 4);
+  const remainingPosts = posts.slice(4);
+
   const clearSearchHref =
     activeCategory === "All"
       ? "/explore"
@@ -280,20 +285,50 @@ export default async function ExplorePage({
               </EmptyState>
             )
           ) : (
-            <div className="animate-fade-in grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-7 xl:grid-cols-4">
-              {posts.map((post, index) => (
-                <ProductCard
-                  key={post.id}
-                  post={post}
-                  creatorName={
-                    post.creator_id ? creatorNames.get(post.creator_id) : null
-                  }
-                  isLoggedIn={Boolean(user)}
-                  liked={likedIds.has(post.id)}
-                  saved={savedIds.has(post.id)}
-                  priority={index < 4}
+            <div className="animate-fade-in">
+              {/* The opening organic row keeps positions 1–4; boosted slots
+                  sit below it and never reorder these results. */}
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-7 xl:grid-cols-4">
+                {leadPosts.map((post, index) => (
+                  <ProductCard
+                    key={post.id}
+                    post={post}
+                    creatorName={
+                      post.creator_id ? creatorNames.get(post.creator_id) : null
+                    }
+                    isLoggedIn={Boolean(user)}
+                    liked={likedIds.has(post.id)}
+                    saved={savedIds.has(post.id)}
+                    priority={index < 4}
+                  />
+                ))}
+              </div>
+
+              {!searchQuery && (
+                <ExploreBoostedSlots
+                  excludeIds={leadPosts.map((post) => post.id)}
+                  category={activeCategory === "All" ? null : activeCategory}
                 />
-              ))}
+              )}
+
+              {remainingPosts.length > 0 && (
+                <div className="mt-6 grid grid-cols-1 gap-5 sm:mt-7 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-7 xl:grid-cols-4">
+                  {remainingPosts.map((post) => (
+                    <ProductCard
+                      key={post.id}
+                      post={post}
+                      creatorName={
+                        post.creator_id
+                          ? creatorNames.get(post.creator_id)
+                          : null
+                      }
+                      isLoggedIn={Boolean(user)}
+                      liked={likedIds.has(post.id)}
+                      saved={savedIds.has(post.id)}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

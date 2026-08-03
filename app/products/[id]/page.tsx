@@ -3,8 +3,16 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SITE_NAME, truncateMeta } from "@/lib/site";
+import {
+  formatBoostTimeLeft,
+  loadActiveBoostForPost,
+  loadBoostProducts,
+  type ActiveBoost,
+  type BoostProduct,
+} from "@/lib/boosts";
 import Avatar from "@/app/components/Avatar";
 import PostActions from "@/app/components/PostActions";
+import BoostDialog from "@/app/components/BoostDialog";
 import DeletePostButton from "@/app/components/DeletePostButton";
 import ProductGallery from "./ProductGallery";
 
@@ -66,14 +74,36 @@ async function getPost(id: string) {
     creatorPhoto = profile?.profile_photo?.trim() || null;
   }
 
+  const isOwner = Boolean(user && post.creator_id === user.id);
+
+  // The boost panel is owner-only, so skip the extra reads for everyone else.
+  let boostProducts: BoostProduct[] = [];
+  let activeBoost: ActiveBoost | null = null;
+  let spendable = 0;
+
+  if (isOwner) {
+    const [products, boost, { data: summary }] = await Promise.all([
+      loadBoostProducts(supabase),
+      loadActiveBoostForPost(supabase, id),
+      supabase.rpc("my_credit_summary").maybeSingle(),
+    ]);
+
+    boostProducts = products;
+    activeBoost = boost;
+    spendable = (summary as { spendable: number } | null)?.spendable ?? 0;
+  }
+
   return {
     post,
     creatorName,
     creatorPhoto,
     isLoggedIn: Boolean(user),
-    isOwner: Boolean(user && post.creator_id === user.id),
+    isOwner,
     liked,
     saved,
+    boostProducts,
+    activeBoost,
+    spendable,
   };
 }
 
@@ -120,8 +150,18 @@ export default async function ProductPage({ params }: Props) {
 
   if (!result) notFound();
 
-  const { post, creatorName, creatorPhoto, isLoggedIn, isOwner, liked, saved } =
-    result;
+  const {
+    post,
+    creatorName,
+    creatorPhoto,
+    isLoggedIn,
+    isOwner,
+    liked,
+    saved,
+    boostProducts,
+    activeBoost,
+    spendable,
+  } = result;
   const images = (post.media_urls ?? []).filter(Boolean) as string[];
   const videoUrl = post.video_url ?? null;
   const postedOn = post.created_at
@@ -223,6 +263,42 @@ export default async function ProductPage({ params }: Props) {
                 </>
               )}
             </div>
+
+            {isOwner && (
+              <div className="mt-5 rounded-2xl border border-ochre/30 bg-ochre/5 px-5 py-4">
+                {activeBoost ? (
+                  <>
+                    <span className="inline-flex items-center rounded-full bg-ochre px-2.5 py-1 text-[0.7rem] font-semibold uppercase tracking-wide text-cream">
+                      {activeBoost.label}
+                    </span>
+                    <p className="mt-2 text-sm leading-relaxed text-ink-muted">
+                      This post is running a boost —{" "}
+                      {formatBoostTimeLeft(activeBoost.ends_at)}. Buyers see the
+                      label too, and organic ranking is unchanged.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm leading-relaxed text-ink-muted">
+                      Spend earned credits to place this post in a labeled,
+                      reserved slot for a fixed window. You have{" "}
+                      <span className="font-semibold text-ink">
+                        {spendable} spendable{" "}
+                        {spendable === 1 ? "credit" : "credits"}
+                      </span>
+                      .
+                    </p>
+                    <div className="mt-3">
+                      <BoostDialog
+                        postId={post.id}
+                        products={boostProducts}
+                        spendable={spendable}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             {post.description && (
               <div className="rule-double mt-7 pt-7">

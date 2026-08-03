@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import {
   getDefaultOgImageUrl,
   getSiteUrl,
@@ -7,6 +8,7 @@ import {
   SITE_NAME,
   SITE_TITLE,
 } from "@/lib/site";
+import HomeFeatureBanner from "@/app/components/HomeFeatureBanner";
 
 const ogImageUrl = getDefaultOgImageUrl();
 const siteUrl = getSiteUrl().toString();
@@ -116,6 +118,11 @@ export default function HomePage() {
           </p>
         </div>
       </section>
+
+      {/* Reserved feature banner — labeled boosts first, organic otherwise. */}
+      <Suspense fallback={null}>
+        <HomeFeatureBanner />
+      </Suspense>
 
       {/* About */}
       <section id="about" className="scroll-mt-24 px-5 py-6 sm:px-8">

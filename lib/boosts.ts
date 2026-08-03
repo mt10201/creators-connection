@@ -1,0 +1,301 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+/** Ledger reason used for every boost debit. */
+export const BOOST_LEDGER_REASON = "boost_purchase";
+
+export const BOOST_CAPS = {
+  concurrentPerAccount: 2,
+  activePerPost: 1,
+  purchasesPer24h: 3,
+} as const;
+
+export type BoostProduct = {
+  slug: string;
+  name: string;
+  description: string;
+  cost_credits: number;
+  duration_hours: number;
+  scope: string;
+  label: string;
+};
+
+export type ActiveBoost = {
+  id: string;
+  post_id: string;
+  product_slug: string;
+  scope: string;
+  label: string;
+  ends_at: string;
+};
+
+export type BoostedPost = {
+  id: string;
+  product_title: string | null;
+  description: string | null;
+  category: string | null;
+  media_urls: string[] | null;
+  video_url: string | null;
+  creator_id: string | null;
+  like_count: number | null;
+  save_count: number | null;
+};
+
+const POST_COLUMNS =
+  "id, product_title, description, category, media_urls, video_url, creator_id, like_count, save_count";
+
+const BOOST_ERRORS: Record<string, string> = {
+  BOOST_NOT_AUTHENTICATED: "Please log in again to boost this post.",
+  BOOST_PRODUCT_UNAVAILABLE: "That boost isn’t available right now.",
+  BOOST_SLOTS_DISABLED: "Spotlight slots aren’t open yet.",
+  BOOST_POST_NOT_FOUND: "We couldn’t find that post.",
+  BOOST_NOT_POST_OWNER: "You can only boost your own posts.",
+  BOOST_POST_NOT_ACTIVE: "This post isn’t live, so it can’t be boosted.",
+  BOOST_POST_NEEDS_IMAGE: "Add at least one image to this post before boosting it.",
+  BOOST_POST_INCOMPLETE:
+    "Add a title, a description of at least 20 characters, and a product link before boosting.",
+  BOOST_POST_ALREADY_BOOSTED:
+    "This post already has an active boost. Wait for it to finish before buying another.",
+  BOOST_TOO_MANY_ACTIVE: `You can run ${BOOST_CAPS.concurrentPerAccount} boosts at a time. Wait for one to end.`,
+  BOOST_DAILY_LIMIT: `You can buy ${BOOST_CAPS.purchasesPer24h} boosts per 24 hours. Try again later.`,
+  BOOST_INSUFFICIENT_CREDITS:
+    "You don’t have enough spendable credits yet. Credits vest 24 hours after you earn them.",
+};
+
+export function getBoostErrorMessage(raw: string | null | undefined): string {
+  const haystack = raw ?? "";
+  for (const [code, message] of Object.entries(BOOST_ERRORS)) {
+    if (haystack.includes(code)) return message;
+  }
+  return haystack.trim() || "Could not buy that boost.";
+}
+
+/** Enabled catalog entries, cheapest first. */
+export async function loadBoostProducts(
+  supabase: SupabaseClient
+): Promise<BoostProduct[]> {
+  const { data, error } = await supabase
+    .from("boost_products")
+    .select("slug, name, description, cost_credits, duration_hours, scope, label")
+    .eq("enabled", true)
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    console.error("Failed to load boost products:", error.message);
+    return [];
+  }
+
+  return (data ?? []) as BoostProduct[];
+}
+
+export async function loadActiveBoostForPost(
+  supabase: SupabaseClient,
+  postId: string
+): Promise<ActiveBoost | null> {
+  const { data, error } = await supabase
+    .from("active_boosts")
+    .select("id, post_id, product_slug, scope, label, ends_at")
+    .eq("post_id", postId)
+    .order("ends_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Failed to load active boost:", error.message);
+    return null;
+  }
+
+  return (data as ActiveBoost | null) ?? null;
+}
+
+export async function loadActiveBoostsForPosts(
+  supabase: SupabaseClient,
+  postIds: string[]
+): Promise<Map<string, ActiveBoost>> {
+  const byPost = new Map<string, ActiveBoost>();
+  if (postIds.length === 0) return byPost;
+
+  const { data, error } = await supabase
+    .from("active_boosts")
+    .select("id, post_id, product_slug, scope, label, ends_at")
+    .in("post_id", postIds);
+
+  if (error) {
+    console.error("Failed to load active boosts:", error.message);
+    return byPost;
+  }
+
+  for (const row of (data ?? []) as ActiveBoost[]) {
+    byPost.set(row.post_id, row);
+  }
+
+  return byPost;
+}
+
+async function loadPostsByIds(
+  supabase: SupabaseClient,
+  ids: string[]
+): Promise<BoostedPost[]> {
+  if (ids.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("posts")
+    .select(POST_COLUMNS)
+    .in("id", ids)
+    .eq("status", "active");
+
+  if (error) {
+    console.error("Failed to load boosted posts:", error.message);
+    return [];
+  }
+
+  const byId = new Map((data ?? []).map((post) => [post.id, post as BoostedPost]));
+  return ids.map((id) => byId.get(id)).filter(Boolean) as BoostedPost[];
+}
+
+export type BoostRailItem = {
+  post: BoostedPost;
+  boostLabel: string | null;
+};
+
+/**
+ * Reserved Just landed strip on Explore (Fresh Push). Boost-only by design:
+ * with no active Fresh Push there is no strip, so organic results keep the
+ * whole page and organic ordering is never touched.
+ */
+export async function loadExploreBoostedPosts(
+  supabase: SupabaseClient,
+  {
+    limit = 4,
+    category,
+    excludeIds = [],
+  }: { limit?: number; category?: string | null; excludeIds?: string[] } = {}
+): Promise<BoostRailItem[]> {
+  const { data, error } = await supabase
+    .from("active_boosts")
+    .select("post_id, label, ends_at")
+    .eq("scope", "explore_first_page")
+    .order("ends_at", { ascending: false })
+    .limit(limit + excludeIds.length);
+
+  if (error) {
+    console.error("Failed to load Explore boosts:", error.message);
+    return [];
+  }
+
+  const rows = ((data ?? []) as { post_id: string; label: string }[]).filter(
+    (row) => !excludeIds.includes(row.post_id)
+  );
+
+  if (rows.length === 0) return [];
+
+  const labelByPost = new Map(rows.map((row) => [row.post_id, row.label]));
+  const posts = await loadPostsByIds(
+    supabase,
+    rows.map((row) => row.post_id)
+  );
+
+  return posts
+    .filter((post) => !category || post.category === category)
+    .slice(0, limit)
+    .map((post) => ({
+      post,
+      boostLabel: labelByPost.get(post.id) ?? "Boosted",
+    }));
+}
+
+/**
+ * Homepage banner: active Home Feature boosts fill the slots and are labeled;
+ * remaining slots fall back to strong organic posts.
+ */
+export async function loadHomeFeatureRail(
+  supabase: SupabaseClient,
+  limit = 5
+): Promise<BoostRailItem[]> {
+  const { data: boostRows, error } = await supabase
+    .from("active_boosts")
+    .select("post_id, label, ends_at")
+    .eq("scope", "home_banner")
+    .order("ends_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("Failed to load home banner boosts:", error.message);
+  }
+
+  const boosted = (boostRows ?? []) as { post_id: string; label: string }[];
+  const labelByPost = new Map(boosted.map((row) => [row.post_id, row.label]));
+  const boostedPosts = await loadPostsByIds(
+    supabase,
+    boosted.map((row) => row.post_id)
+  );
+
+  const items: BoostRailItem[] = boostedPosts.map((post) => ({
+    post,
+    boostLabel: labelByPost.get(post.id) ?? "Featured",
+  }));
+
+  const remaining = limit - items.length;
+  if (remaining <= 0) return items;
+
+  const excludeIds = items.map((item) => item.post.id);
+  const { data, error: organicError } = await supabase
+    .from("posts")
+    .select(POST_COLUMNS)
+    .eq("status", "active")
+    .order("like_count", { ascending: false })
+    .order("save_count", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(remaining + excludeIds.length);
+
+  if (organicError) {
+    console.error("Failed to load organic banner posts:", organicError.message);
+    return items;
+  }
+
+  const fallback = ((data ?? []) as BoostedPost[])
+    .filter((post) => !excludeIds.includes(post.id))
+    .slice(0, remaining);
+
+  items.push(...fallback.map((post) => ({ post, boostLabel: null })));
+
+  return items;
+}
+
+export async function loadCreatorNames(
+  supabase: SupabaseClient,
+  creatorIds: (string | null)[]
+): Promise<Map<string, string>> {
+  const names = new Map<string, string>();
+  const ids = [...new Set(creatorIds.filter(Boolean))] as string[];
+  if (ids.length === 0) return names;
+
+  const { data, error } = await supabase
+    .from("public_profiles")
+    .select("id, username")
+    .in("id", ids);
+
+  if (error) {
+    console.error("Failed to load creator profiles:", error.message);
+    return names;
+  }
+
+  for (const profile of data ?? []) {
+    const name = profile.username?.trim();
+    if (name) names.set(profile.id, name);
+  }
+
+  return names;
+}
+
+export function formatBoostTimeLeft(endsAt: string): string {
+  const ms = new Date(endsAt).getTime() - Date.now();
+  if (!Number.isFinite(ms) || ms <= 0) return "ending now";
+
+  const minutes = Math.round(ms / 60000);
+  if (minutes < 60) return `${minutes} min left`;
+
+  const hours = Math.round(minutes / 60);
+  if (hours < 48) return `${hours} ${hours === 1 ? "hour" : "hours"} left`;
+
+  return `${Math.round(hours / 24)} days left`;
+}

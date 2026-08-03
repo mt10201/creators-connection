@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { countUnreadNotifications } from "@/lib/notifications";
+import { loadWallet, type Wallet } from "@/lib/wallet";
 import Avatar from "./Avatar";
+import CreditWallet from "./CreditWallet";
 import LogoutButton from "./LogoutButton";
 import NotificationBell from "./NotificationBell";
 
@@ -20,7 +22,7 @@ async function getViewer() {
 
   if (!user) return null;
 
-  // Profile and unread count are independent: a notifications failure must not
+  // Profile, wallet, and unread count are independent: one failure must not
   // hide the rest of the signed-in chrome (including the bell itself).
   const [{ data: profile }, unreadNotifications] = await Promise.all([
     supabase
@@ -34,13 +36,27 @@ async function getViewer() {
     }),
   ]);
 
+  const wallet = await loadWallet(supabase, profile?.credit_balance ?? 0).catch(
+    (error) => {
+      console.error("Failed to load wallet:", error);
+      return null;
+    }
+  );
+
   return {
     displayName:
       profile?.username?.trim() ||
       (user.user_metadata?.username as string | undefined) ||
       user.email ||
       "Creator",
-    creditBalance: profile?.credit_balance ?? 0,
+    wallet:
+      wallet ??
+      ({
+        spendable: profile?.credit_balance ?? 0,
+        vesting: 0,
+        total: profile?.credit_balance ?? 0,
+        transactions: [],
+      } satisfies Wallet),
     photoUrl: profile?.profile_photo?.trim() || null,
     unreadNotifications,
   };
@@ -56,7 +72,7 @@ export default async function Navbar() {
   const viewer = await getViewer();
   const isLoggedIn = viewer !== null;
   const displayName = viewer?.displayName ?? "";
-  const creditBalance = viewer?.creditBalance ?? 0;
+  const wallet = viewer?.wallet ?? null;
   const photoUrl = viewer?.photoUrl ?? null;
   const unreadNotifications = viewer?.unreadNotifications ?? 0;
 
@@ -115,12 +131,7 @@ export default async function Navbar() {
                     {displayName}
                   </span>
                 </Link>
-                <span
-                  title={`${creditBalance} credits`}
-                  className="rounded-full border border-ochre/30 bg-ochre/10 px-2.5 py-1 text-xs font-semibold text-ochre"
-                >
-                  {creditBalance} {creditBalance === 1 ? "credit" : "credits"}
-                </span>
+                {wallet && <CreditWallet wallet={wallet} />}
                 <LogoutButton />
               </div>
             </>
@@ -176,9 +187,24 @@ export default async function Navbar() {
                       </span>
                     </span>
                   </Link>
-                  <span className="mt-2.5 inline-flex rounded-full border border-ochre/30 bg-ochre/10 px-2.5 py-1 text-xs font-semibold text-ochre">
-                    {creditBalance} {creditBalance === 1 ? "credit" : "credits"}
-                  </span>
+                  {wallet && (
+                    <div className="mt-2.5">
+                      <span className="inline-flex rounded-full border border-ochre/30 bg-ochre/10 px-2.5 py-1 text-xs font-semibold text-ochre">
+                        {wallet.spendable} spendable
+                      </span>
+                      <p className="mt-1.5 text-xs text-ink-faint">
+                        {wallet.vesting > 0
+                          ? `${wallet.vesting} vesting · `
+                          : ""}
+                        <Link
+                          href="/how-it-works#credits"
+                          className="text-terracotta underline-offset-4 hover:underline"
+                        >
+                          How credits work
+                        </Link>
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 

@@ -22,6 +22,8 @@ type Props = {
   liked: boolean;
   saved: boolean;
   priority?: boolean;
+  /** "Boosted" / "Featured" — always shown when the card sits in a paid rail. */
+  boostLabel?: string | null;
 };
 
 export default function ProductCard({
@@ -32,6 +34,7 @@ export default function ProductCard({
   liked,
   saved,
   priority = false,
+  boostLabel = null,
 }: Props) {
   const coverImage = post.media_urls?.[0] ?? null;
   const extraImages = (post.media_urls?.length ?? 0) - 1;
@@ -52,9 +55,19 @@ export default function ProductCard({
       </div>
 
       <div className="flex flex-1 flex-col px-5 pb-4 pt-4 sm:pb-5">
-        {post.category && (
-          <span className="eyebrow text-sage">{post.category}</span>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {boostLabel && (
+            <span
+              title="Paid with earned credits. Organic ranking is unaffected."
+              className="inline-flex items-center rounded-full bg-ochre px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-cream"
+            >
+              {boostLabel}
+            </span>
+          )}
+          {post.category && (
+            <span className="eyebrow text-sage">{post.category}</span>
+          )}
+        </div>
 
         <h2 className="mt-2 font-display text-lg font-semibold leading-snug tracking-tight">
           <Link

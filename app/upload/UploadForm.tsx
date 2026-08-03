@@ -13,14 +13,29 @@ import {
   validateProductUrl,
   validateVideo,
 } from "@/lib/posts";
+import type { BoostProduct } from "@/lib/boosts";
 import TagInput from "@/app/components/TagInput";
 import Spinner from "@/app/components/Spinner";
+import BoostDialog from "@/app/components/BoostDialog";
+import Link from "next/link";
 
 const inputClass = "form-input";
 const labelClass = "form-label";
 
-export default function UploadForm({ userId }: { userId: string }) {
+type UploadFormProps = {
+  userId: string;
+  /** Offered right after a successful post; null when the product is disabled. */
+  freshPush: BoostProduct | null;
+  spendable: number;
+};
+
+export default function UploadForm({
+  userId,
+  freshPush,
+  spendable,
+}: UploadFormProps) {
   const router = useRouter();
+  const [postedId, setPostedId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [productUrl, setProductUrl] = useState("");
@@ -152,11 +167,21 @@ export default function UploadForm({ userId }: { userId: string }) {
       return;
     }
 
-    setSuccess(
-      result.awardedPostCredit
-        ? "Product posted! You earned 1 credit (spendable in 24 hours). Redirecting…"
-        : "Product posted! This product link already earned a post credit, so no new one was added. Redirecting…"
-    );
+    const creditNote = result.awardedPostCredit
+      ? "You earned 1 credit (spendable in 24 hours)."
+      : "This product link already earned a post credit, so no new one was added.";
+
+    // With a boost on offer we stay put so the creator can act on it; without
+    // one there is nothing left to do here.
+    if (freshPush) {
+      setSuccess(`Product posted! ${creditNote}`);
+      setPostedId(result.postId);
+      setLoading(false);
+      router.refresh();
+      return;
+    }
+
+    setSuccess(`Product posted! ${creditNote} Redirecting…`);
     router.push("/explore");
     router.refresh();
   }
@@ -185,6 +210,38 @@ export default function UploadForm({ userId }: { userId: string }) {
           {success && (
             <div role="status" className="form-alert-success mb-6">
               {success}
+            </div>
+          )}
+
+          {postedId && freshPush && (
+            <div className="mb-6 rounded-2xl border border-ochre/30 bg-ochre/5 px-5 py-4">
+              <span className="eyebrow text-ochre">Optional</span>
+              <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">
+                {freshPush.name} places this post in a labeled Just landed strip
+                on Explore for {freshPush.duration_hours} hours —{" "}
+                {freshPush.cost_credits} credits. You have {spendable}{" "}
+                spendable.
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <BoostDialog
+                  postId={postedId}
+                  products={[freshPush]}
+                  spendable={spendable}
+                  triggerLabel={`Boost with ${freshPush.name}`}
+                />
+                <Link
+                  href={`/products/${postedId}`}
+                  className="text-sm text-terracotta underline-offset-4 hover:underline"
+                >
+                  View my post →
+                </Link>
+                <Link
+                  href="/explore"
+                  className="text-sm text-ink-muted underline-offset-4 hover:text-terracotta hover:underline"
+                >
+                  Go to Explore
+                </Link>
+              </div>
             </div>
           )}
 

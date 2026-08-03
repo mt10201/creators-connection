@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { SITE_NAME } from "@/lib/site";
+import { createClient } from "@/lib/supabase/server";
+import { BOOST_CAPS, loadBoostProducts } from "@/lib/boosts";
 
 const howItWorksDescription =
   "Learn how Creators Connection works — create an account, post your products, browse for inspiration, and use credits to grow.";
@@ -34,11 +36,19 @@ const earnCredits = [
   "Up to 10 product posts per day",
 ];
 
-const spendCredits = [
-  "Boost a product post for extra visibility",
-  "Unlock premium placement in discovery feeds",
-  "Save and organize inspiration collections",
-  "Access featured creator spotlights",
+const spendRules = [
+  `Boosts are bought with vested credits only — ${BOOST_CAPS.purchasesPer24h} purchases per 24 hours`,
+  `${BOOST_CAPS.activePerPost} active boost per post, ${BOOST_CAPS.concurrentPerAccount} running at a time per account`,
+  "Every boosted item carries a visible “Boosted” or “Featured” label",
+  "The first four Explore results are always organic and can’t be bought",
+  "Explore Spotlight slots are coming later and are switched off today",
+];
+
+const creditsCannotBuy = [
+  "A higher position in Explore, search, or any organic feed",
+  "Likes, saves, followers, or engagement of any kind",
+  "Removal of the boost label, or a hidden/undisclosed placement",
+  "Anything with real money — credits are earned, never sold",
 ];
 
 function StepNumber({ value }: { value: string }) {
@@ -49,7 +59,11 @@ function StepNumber({ value }: { value: string }) {
   );
 }
 
-export default function HowItWorksPage() {
+export default async function HowItWorksPage() {
+  const supabase = await createClient();
+  // Prices live in boost_products so this page can never drift from the RPC.
+  const boostProducts = await loadBoostProducts(supabase);
+
   return (
     <div>
       {/* Page header */}
@@ -137,17 +151,16 @@ export default function HowItWorksPage() {
             </div>
           </article>
 
-          <article className="grid gap-5 sm:grid-cols-[4rem_minmax(0,1fr)]">
+          <article id="credits" className="grid scroll-mt-24 gap-5 sm:grid-cols-[4rem_minmax(0,1fr)]">
             <StepNumber value="04" />
             <div className="rule-double pt-6">
               <h2 className="font-display text-2xl font-semibold tracking-tight">
                 The credit system
               </h2>
               <p className="mt-3 text-[0.95rem] leading-[1.85] text-ink-muted">
-                Credits keep Creators Connection balanced — rewarding people who
-                contribute to the community while giving everyone access to
-                powerful discovery tools. New credits become spendable after 24
-                hours.
+                Credits are earned by contributing, never bought with money. New
+                credits vest for 24 hours before they become spendable, which
+                keeps quick throwaway posting from turning into instant reach.
               </p>
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
                 <div className="rounded-[1.25rem] border border-terracotta/15 bg-terracotta-soft/40 p-6">
@@ -172,7 +185,25 @@ export default function HowItWorksPage() {
                 <div className="rounded-[1.25rem] border border-sage/20 bg-sage-soft/50 p-6">
                   <h3 className="eyebrow text-sage">How to spend credits</h3>
                   <ul className="mt-4 space-y-3">
-                    {spendCredits.map((item) => (
+                    {boostProducts.map((product) => (
+                      <li
+                        key={product.slug}
+                        className="flex items-start gap-3 text-sm leading-relaxed text-ink-muted"
+                      >
+                        <span
+                          aria-hidden
+                          className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-sage"
+                        />
+                        <span>
+                          <span className="font-medium text-ink">
+                            {product.name}
+                          </span>{" "}
+                          — {product.cost_credits} credits for{" "}
+                          {product.duration_hours} hours. {product.description}
+                        </span>
+                      </li>
+                    ))}
+                    {spendRules.map((item) => (
                       <li
                         key={item}
                         className="flex items-start gap-3 text-sm leading-relaxed text-ink-muted"
@@ -186,6 +217,33 @@ export default function HowItWorksPage() {
                     ))}
                   </ul>
                 </div>
+              </div>
+
+              <div className="mt-4 rounded-[1.25rem] border border-sand bg-parchment/70 p-6">
+                <h3 className="eyebrow text-ink-faint">
+                  What credits cannot buy
+                </h3>
+                <ul className="mt-4 space-y-3">
+                  {creditsCannotBuy.map((item) => (
+                    <li
+                      key={item}
+                      className="flex items-start gap-3 text-sm leading-relaxed text-ink-muted"
+                    >
+                      <span
+                        aria-hidden
+                        className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-clay"
+                      />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-4 text-sm leading-relaxed text-ink-muted">
+                  Boosts only fill reserved, labeled slots — the Just landed
+                  strip on Explore and the homepage banner. The first four
+                  Explore results always stay organic, organic ranking never
+                  takes a boost into account, and when nobody has boosted, the
+                  Just landed strip simply doesn’t appear.
+                </p>
               </div>
             </div>
           </article>

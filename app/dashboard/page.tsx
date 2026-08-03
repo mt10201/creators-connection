@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { countCollection, loadCollection } from "@/lib/collections";
+import { loadActiveBoostsForPosts, type ActiveBoost } from "@/lib/boosts";
+import { loadWallet } from "@/lib/wallet";
 import ProductCard, {
   type ProductCardPost,
 } from "@/app/components/ProductCard";
@@ -133,6 +135,16 @@ export default async function DashboardPage({
     for (const row of saves ?? []) ownSavedIds.add(row.post_id);
   }
 
+  const activeBoosts: Map<string, ActiveBoost> =
+    activeView === "posts" && posts.length > 0
+      ? await loadActiveBoostsForPosts(
+          supabase,
+          posts.map((post) => post.id)
+        )
+      : new Map();
+
+  const wallet = await loadWallet(supabase, credits);
+
   const isNewCreator = posts.length === 0;
   const heading = headings[activeView];
   // The empty state below carries its own explanation, so the "newest first"
@@ -189,15 +201,27 @@ export default async function DashboardPage({
           <div className="mt-10 rounded-[2rem] border border-ochre/25 bg-gradient-to-br from-ochre/15 via-parchment/80 to-cream p-8 shadow-soft sm:p-10">
             <span className="eyebrow text-ochre">Credit balance</span>
             <p className="mt-3 font-display text-5xl font-semibold tracking-tight text-ink sm:text-6xl">
-              {credits}
+              {wallet.spendable}
               <span className="ml-2 text-2xl font-medium text-ink-muted sm:text-3xl">
-                {credits === 1 ? "credit" : "credits"}
+                spendable {wallet.spendable === 1 ? "credit" : "credits"}
               </span>
             </p>
+            {wallet.vesting > 0 && (
+              <p className="mt-2 text-sm text-ink-muted">
+                {wallet.vesting} more still vesting.
+              </p>
+            )}
             <p className="mt-4 max-w-lg text-sm leading-relaxed text-ink-muted">
               {credits === 0
                 ? "New accounts get a 5-credit welcome bonus. Publish a new product link for +1, then earn more when others like and save your work. Credits become spendable after 24 hours."
-                : "Credits come from your signup bonus, first-time product links, and likes/saves on your posts. New credits become spendable after 24 hours."}
+                : "Credits come from your signup bonus, first-time product links, and likes/saves on your posts. New credits become spendable after 24 hours."}{" "}
+              <Link
+                href="/how-it-works#credits"
+                className="text-terracotta underline-offset-4 hover:underline"
+              >
+                Spend them on boosts
+              </Link>
+              .
             </p>
           </div>
 
@@ -274,6 +298,7 @@ export default async function DashboardPage({
                     liked={ownLikedIds.has(post.id)}
                     saved={ownSavedIds.has(post.id)}
                     priority={index < 4}
+                    boostLabel={activeBoosts.get(post.id)?.label ?? null}
                   />
                 ))}
               </div>
