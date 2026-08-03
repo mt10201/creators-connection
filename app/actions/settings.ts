@@ -129,11 +129,21 @@ export async function changePassword(
   if (!email) {
     return {
       ok: false,
-      error: "Your account has no email on file, so the password can’t be changed here.",
+      error:
+        "Your account has no email on file, so the password can’t be changed here.",
     };
   }
 
-  if (!currentPassword) {
+  if (!user.email_confirmed_at) {
+    return {
+      ok: false,
+      error:
+        "Confirm your email before changing your password. Check your inbox for the verification link.",
+    };
+  }
+
+  // Never allow a password change from new-password fields alone.
+  if (!currentPassword.trim()) {
     return { ok: false, error: "Enter your current password." };
   }
 
@@ -149,7 +159,7 @@ export async function changePassword(
     };
   }
 
-  // Re-check the current password before allowing a change.
+  // Prove possession of the current password before updating.
   const { error: verifyError } = await supabase.auth.signInWithPassword({
     email,
     password: currentPassword,
@@ -159,11 +169,21 @@ export async function changePassword(
     return { ok: false, error: "Current password is incorrect." };
   }
 
+  // Supabase-native secure update: also send current_password so Auth can
+  // enforce it when “Require current password” is enabled on the project.
   const { error: updateError } = await supabase.auth.updateUser({
     password: newPassword,
+    current_password: currentPassword,
   });
 
   if (updateError) {
+    const message = updateError.message.toLowerCase();
+    if (
+      message.includes("current_password") ||
+      message.includes("current password")
+    ) {
+      return { ok: false, error: "Current password is incorrect." };
+    }
     return { ok: false, error: updateError.message };
   }
 

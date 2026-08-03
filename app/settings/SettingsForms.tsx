@@ -378,6 +378,11 @@ function PasswordForm() {
 
   return (
     <form className="space-y-4" onSubmit={onSubmit}>
+      <p className="text-sm leading-relaxed text-ink-muted">
+        Enter your current password to confirm it’s you. Password changes aren’t
+        allowed with only the new password fields.
+      </p>
+
       <div>
         <label htmlFor="current-password" className="form-label">
           Current password
@@ -391,8 +396,12 @@ function PasswordForm() {
           value={currentPassword}
           onChange={(event) => setCurrentPassword(event.target.value)}
           disabled={pending}
+          aria-describedby="current-password-hint"
           className="form-input"
         />
+        <p id="current-password-hint" className="form-hint">
+          Required to change your password.
+        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -448,7 +457,11 @@ function PasswordForm() {
         </p>
       )}
 
-      <button type="submit" disabled={pending} className="btn-primary">
+      <button
+        type="submit"
+        disabled={pending || !currentPassword.trim()}
+        className="btn-primary"
+      >
         {pending && <Spinner />}
         {pending ? "Updating…" : "Update password"}
       </button>
