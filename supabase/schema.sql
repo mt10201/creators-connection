@@ -132,6 +132,10 @@ begin
     0
   )
   on conflict (id) do nothing;
+
+  -- Signup bonus is awarded by credits_hybrid.sql (grant_credits + unique index).
+  -- Kept as a no-op here until that script has been applied; re-running
+  -- credits_hybrid.sql replaces this function with the full version.
   return new;
 end;
 $$;
@@ -190,7 +194,7 @@ where coalesce(trim(username), '') = ''
 
 create table if not exists public.posts (
   id uuid primary key default gen_random_uuid(),
-  creator_id uuid references public.users (id),
+  creator_id uuid references public.users (id) on delete cascade,
   product_title text,
   description text,
   product_link text,
@@ -254,8 +258,26 @@ create table if not exists public.credit_transactions (
   amount integer not null,
   reason text not null,
   post_id uuid references public.posts (id) on delete set null,
+  source_user_id uuid references public.users (id) on delete set null,
+  available_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );
+
+alter table public.credit_transactions
+  add column if not exists source_user_id uuid references public.users (id) on delete set null;
+
+alter table public.credit_transactions
+  add column if not exists available_at timestamptz;
+
+update public.credit_transactions
+set available_at = created_at
+where available_at is null;
+
+alter table public.credit_transactions
+  alter column available_at set default now();
+
+alter table public.credit_transactions
+  alter column available_at set not null;
 
 create index if not exists credit_transactions_user_id_idx
   on public.credit_transactions (user_id, created_at desc);
@@ -268,11 +290,16 @@ create policy "Users can view own transactions"
   to authenticated
   using (auth.uid() = user_id);
 
--- Deliberately no insert/update policy: only the trigger below may write here,
--- so a user cannot mint credits by calling the API directly.
+-- Deliberately no insert/update policy: only security definer functions may
+-- write here, so a user cannot mint credits by calling the API directly.
+
+alter table public.posts
+  add column if not exists product_link_normalized text;
 
 -- ---------------------------------------------------------------------------
--- Award +5 credits whenever a post is created
+-- Legacy +5 award stub. Replaced by the hybrid rules in credits_hybrid.sql
+-- (first-URL +1, engagement caps, signup bonus, vesting, rate limits).
+-- Fresh installs should run credits_hybrid.sql after this file.
 -- ---------------------------------------------------------------------------
 
 create or replace function public.award_post_credits()
@@ -282,13 +309,8 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.credit_transactions (user_id, amount, reason, post_id)
-  values (new.creator_id, 5, 'post_created', new.id);
-
-  update public.users
-  set credit_balance = coalesce(credit_balance, 0) + 5
-  where id = new.creator_id;
-
+  -- No-op until credits_hybrid.sql is applied. Avoids minting the old +5
+  -- on databases that have schema.sql but not the hybrid migration yet.
   return new;
 end;
 $$;
@@ -299,7 +321,7 @@ create trigger on_post_created_award_credits
   for each row
   execute function public.award_post_credits();
 
--- The matching clawback for deleted posts lives in post_delete_credits.sql.
+-- Hybrid credit rules + clawback: see credits_hybrid.sql.
 
 -- ---------------------------------------------------------------------------
 -- Storage: product-images bucket

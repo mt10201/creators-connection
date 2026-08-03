@@ -3,7 +3,11 @@
 import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { changePassword, updateUsername } from "@/app/actions/settings";
+import {
+  changePassword,
+  deleteAccount,
+  updateUsername,
+} from "@/app/actions/settings";
 import {
   clearProfilePhoto,
   updateProfilePhoto,
@@ -38,86 +42,94 @@ export default function SettingsForms({
   const [tab, setTab] = useState<Tab>("profile");
 
   return (
-    <div className="rounded-2xl border border-sand bg-cream shadow-soft">
-      {/* Always-visible photo controls — not buried behind a tab. */}
-      <PhotoSection
-        initialUsername={initialUsername}
-        initialPhotoUrl={initialPhotoUrl}
-      />
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-sand bg-cream shadow-soft">
+        {/* Always-visible photo controls — not buried behind a tab. */}
+        <PhotoSection
+          initialUsername={initialUsername}
+          initialPhotoUrl={initialPhotoUrl}
+        />
 
-      <div className="grid gap-4 border-b border-sand px-5 py-4 sm:grid-cols-[1fr_auto] sm:items-center sm:px-6">
-        <dl className="grid gap-3 sm:grid-cols-2 sm:gap-6">
-          <div>
-            <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-faint">
-              Email
-            </dt>
-            <dd className="mt-1 truncate text-sm text-ink">{email}</dd>
-            <dd className="mt-0.5 text-xs text-ink-muted">
-              Can’t be changed here yet.
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-faint">
-              Credits
-            </dt>
+        <div className="grid gap-4 border-b border-sand px-5 py-4 sm:grid-cols-[1fr_auto] sm:items-center sm:px-6">
+          <dl className="grid gap-3 sm:grid-cols-2 sm:gap-6">
+            <div>
+              <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-faint">
+                Email
+              </dt>
+              <dd className="mt-1 truncate text-sm text-ink">{email}</dd>
+              <dd className="mt-0.5 text-xs text-ink-muted">
+                Can’t be changed here yet.
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-faint">
+                Credits
+              </dt>
             <dd className="mt-1 font-display text-xl font-semibold tracking-tight text-ink">
               {credits}
               <span className="ml-1.5 text-sm font-medium text-ink-muted">
                 {credits === 1 ? "credit" : "credits"}
               </span>
             </dd>
+            <dd className="mt-0.5 text-xs text-ink-muted">
+              From signup bonus, first-time product links (+1), and likes/saves
+              on your posts.
+            </dd>
           </div>
-        </dl>
-        {profileHref && (
-          <Link
-            href={profileHref}
-            className="shrink-0 text-sm text-terracotta underline-offset-4 transition hover:underline"
-          >
-            Public profile →
-          </Link>
-        )}
-      </div>
-
-      <div className="px-5 py-4 sm:px-6">
-        <div
-          role="tablist"
-          aria-label="Settings sections"
-          className="inline-flex gap-1 rounded-full border border-sand bg-parchment/70 p-1"
-        >
-          {(
-            [
-              { id: "profile", label: "Username" },
-              { id: "password", label: "Password" },
-            ] as const
-          ).map((item) => {
-            const active = tab === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setTab(item.id)}
-                className={`chip border-transparent ${
-                  active
-                    ? "bg-terracotta font-medium text-cream shadow-soft"
-                    : "text-ink-muted hover:bg-cream hover:text-terracotta"
-                }`}
-              >
-                {item.label}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="mt-5" role="tabpanel">
-          {tab === "profile" ? (
-            <UsernameForm initialUsername={initialUsername} />
-          ) : (
-            <PasswordForm />
+          </dl>
+          {profileHref && (
+            <Link
+              href={profileHref}
+              className="shrink-0 text-sm text-terracotta underline-offset-4 transition hover:underline"
+            >
+              Public profile →
+            </Link>
           )}
         </div>
+
+        <div className="px-5 py-4 sm:px-6">
+          <div
+            role="tablist"
+            aria-label="Settings sections"
+            className="inline-flex gap-1 rounded-full border border-sand bg-parchment/70 p-1"
+          >
+            {(
+              [
+                { id: "profile", label: "Username" },
+                { id: "password", label: "Password" },
+              ] as const
+            ).map((item) => {
+              const active = tab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setTab(item.id)}
+                  className={`chip border-transparent ${
+                    active
+                      ? "bg-terracotta font-medium text-cream shadow-soft"
+                      : "text-ink-muted hover:bg-cream hover:text-terracotta"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-5" role="tabpanel">
+            {tab === "profile" ? (
+              <UsernameForm initialUsername={initialUsername} />
+            ) : (
+              <PasswordForm />
+            )}
+          </div>
+        </div>
       </div>
+
+      <DeleteAccountSection username={initialUsername} />
     </div>
   );
 }
@@ -441,5 +453,112 @@ function PasswordForm() {
         {pending ? "Updating…" : "Update password"}
       </button>
     </form>
+  );
+}
+
+function DeleteAccountSection({ username }: { username: string }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [confirmation, setConfirmation] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  const hasUsername = Boolean(username.trim());
+  const confirmLabel = hasUsername ? username : "DELETE";
+
+  function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+
+    startTransition(async () => {
+      const result = await deleteAccount(confirmation);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+
+      router.replace(result.redirectTo);
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="rounded-2xl border border-terracotta/25 bg-terracotta-soft/30 p-5 shadow-soft sm:p-6">
+      <span className="eyebrow text-terracotta-deep">Danger zone</span>
+      <h2 className="mt-2 font-display text-xl font-semibold tracking-tight">
+        Delete account
+      </h2>
+      <p className="mt-2 text-sm leading-relaxed text-ink-muted">
+        Permanently deletes your profile, posts, likes, saves, notifications,
+        and credits. This can’t be undone.
+      </p>
+
+      {!open ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="btn-secondary mt-5 border-terracotta/30 text-terracotta-deep hover:border-terracotta/50 hover:bg-cream hover:text-terracotta-deep"
+        >
+          Delete my account…
+        </button>
+      ) : (
+        <form className="mt-5 space-y-4" onSubmit={onSubmit}>
+          <div>
+            <label htmlFor="delete-account-confirm" className="form-label">
+              {hasUsername
+                ? "Type your username to confirm"
+                : "Type DELETE to confirm"}
+            </label>
+            <input
+              id="delete-account-confirm"
+              name="confirmation"
+              type="text"
+              autoComplete="off"
+              required
+              value={confirmation}
+              onChange={(event) => setConfirmation(event.target.value)}
+              disabled={pending}
+              placeholder={confirmLabel}
+              aria-describedby="delete-account-hint"
+              className="form-input"
+            />
+            <p id="delete-account-hint" className="form-hint">
+              {hasUsername
+                ? `Enter “${username}” exactly. Your account will be removed immediately.`
+                : "Enter DELETE in all caps. Your account will be removed immediately."}
+            </p>
+          </div>
+
+          {error && (
+            <p role="alert" className="form-alert-error">
+              {error}
+            </p>
+          )}
+
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => {
+                setOpen(false);
+                setConfirmation("");
+                setError(null);
+              }}
+              className="btn-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={pending || !confirmation.trim()}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-terracotta-deep px-5 text-sm font-medium text-cream shadow-soft transition duration-200 hover:bg-terracotta disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {pending && <Spinner />}
+              {pending ? "Deleting…" : "Permanently delete account"}
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
   );
 }

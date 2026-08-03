@@ -27,10 +27,6 @@ export type NewPost = {
   video?: File | null;
 };
 
-export type CreatePostResult =
-  | { ok: true; postId: string }
-  | { ok: false; message: string };
-
 export function validateImage(file: File): string | null {
   if (!file.type.startsWith("image/")) {
     return "Please choose an image file.";
@@ -108,16 +104,107 @@ export async function validateVideo(file: File): Promise<string | null> {
   return null;
 }
 
-export function validateProductUrl(value: string): string | null {
+const TRACKING_QUERY_PARAMS = new Set([
+  "fbclid",
+  "gclid",
+  "gclsrc",
+  "dclid",
+  "msclkid",
+  "twclid",
+  "li_fat_id",
+  "mc_eid",
+  "mc_cid",
+  "_ga",
+  "_gl",
+  "igshid",
+  "ref",
+  "referrer",
+  "fb_action_ids",
+  "fb_action_types",
+  "fb_source",
+]);
+
+/** Normalize product URLs the same way the DB does before credit claims. */
+export function normalizeProductUrl(value: string): string | null {
   try {
-    const url = new URL(value);
-    if (url.protocol !== "http:" && url.protocol !== "https:") {
-      return "Product link must start with http:// or https://";
+    const parsed = new URL(value.trim());
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return null;
     }
-    return null;
+
+    parsed.hash = "";
+    parsed.hostname = parsed.hostname.toLowerCase();
+
+    if (
+      (parsed.protocol === "http:" && parsed.port === "80") ||
+      (parsed.protocol === "https:" && parsed.port === "443")
+    ) {
+      parsed.port = "";
+    }
+
+    const kept = new URLSearchParams();
+    parsed.searchParams.forEach((paramValue, key) => {
+      const lower = key.toLowerCase();
+      if (lower.startsWith("utm_") || TRACKING_QUERY_PARAMS.has(lower)) {
+        return;
+      }
+      kept.append(key, paramValue);
+    });
+    parsed.search = kept.toString();
+
+    let path = parsed.pathname;
+    if (path !== "/" && path.endsWith("/")) {
+      path = path.slice(0, -1);
+    }
+    if (path === "/") {
+      path = "";
+    }
+    parsed.pathname = path;
+
+    // URL serializes empty path as "" only when we rebuild manually.
+    const query = parsed.searchParams.toString();
+    return (
+      `${parsed.protocol}//${parsed.host}${path}` +
+      (query ? `?${query}` : "")
+    );
   } catch {
+    return null;
+  }
+}
+
+export function validateProductUrl(value: string): string | null {
+  if (!normalizeProductUrl(value)) {
     return "Please enter a valid product link, e.g. https://example.com/item";
   }
+  return null;
+}
+
+const DAILY_POST_LIMIT_MESSAGE =
+  "You’ve reached today’s limit — you can post up to 10 products per day. Please try again tomorrow.";
+
+function mapPostInsertError(error: {
+  message?: string;
+  details?: string;
+  hint?: string;
+  code?: string;
+} | null): string {
+  const haystack = [error?.message, error?.details, error?.hint, error?.code]
+    .filter(Boolean)
+    .join(" ");
+
+  if (haystack.includes("CREDIT_PRODUCT_URL_REQUIRED")) {
+    return "A valid product link is required.";
+  }
+  if (
+    haystack.includes("CREDIT_RATE_LIMIT_DAILY") ||
+    /10 products per day/i.test(haystack)
+  ) {
+    return DAILY_POST_LIMIT_MESSAGE;
+  }
+  if (haystack.includes("CREDIT_CREATOR_MISMATCH")) {
+    return "Please log in again and try posting.";
+  }
+  return error?.message?.trim() || "Could not save your post.";
 }
 
 /**
@@ -145,15 +232,34 @@ function fileExtension(file: File) {
   return file.type.split("/")[1] ?? "jpg";
 }
 
+export type CreatePostSuccess = {
+  ok: true;
+  postId: string;
+  /** True when this post claimed a first-time URL credit (+1). */
+  awardedPostCredit: boolean;
+};
+
+export type CreatePostResult =
+  | CreatePostSuccess
+  | { ok: false; message: string };
+
 /**
- * Uploads every image (and optional video) then creates the post row. The
- * `posts` insert trigger awards the +5 credits.
+ * Uploads every image (and optional video) then creates the post row.
+ * Post credits (+1, first normalized URL only) are awarded by a DB trigger.
  */
 export async function createPost(
   supabase: SupabaseClient,
   userId: string,
   post: NewPost
 ): Promise<CreatePostResult> {
+  const normalizedUrl = normalizeProductUrl(post.productUrl);
+  if (!normalizedUrl) {
+    return {
+      ok: false,
+      message: "A valid product link is required.",
+    };
+  }
+
   const storage = supabase.storage.from(PRODUCT_IMAGES_BUCKET);
   const paths: string[] = [];
   let videoPath: string | null = null;
@@ -229,11 +335,18 @@ export async function createPost(
     await cleanupUploads();
     return {
       ok: false,
-      message: insertError?.message ?? "Could not save your post.",
+      message: mapPostInsertError(insertError),
     };
   }
 
   const postId = data.id as string;
+
+  const { data: creditRow } = await supabase
+    .from("credit_transactions")
+    .select("id")
+    .eq("post_id", postId)
+    .eq("reason", "post_created")
+    .maybeSingle();
 
   await trackEvent(supabase, {
     event_name: "post_upload",
@@ -243,10 +356,16 @@ export async function createPost(
       category: post.category,
       image_count: paths.length,
       has_video: Boolean(videoPath),
+      awarded_post_credit: Boolean(creditRow),
+      normalized_product_url: normalizedUrl,
     },
   });
 
-  return { ok: true, postId };
+  return {
+    ok: true,
+    postId,
+    awardedPostCredit: Boolean(creditRow),
+  };
 }
 
 export type ExistingMedia = {
@@ -350,12 +469,18 @@ export async function updatePost(
     videoUrl = input.keepVideo.url;
   }
 
+  if (!normalizeProductUrl(input.productUrl)) {
+    await cleanupNewUploads();
+    return { ok: false, message: "A valid product link is required." };
+  }
+
   const { error: updateError } = await supabase
     .from("posts")
     .update({
       product_title: input.title.trim(),
       description: input.description.trim(),
       product_link: input.productUrl.trim(),
+      // Edits never award post credits; only create does.
       category: input.category,
       media_urls: finalUrls,
       media_paths: finalPaths,
@@ -386,5 +511,5 @@ export async function updatePost(
     await storage.remove(toRemove);
   }
 
-  return { ok: true, postId };
+  return { ok: true, postId, awardedPostCredit: false };
 }

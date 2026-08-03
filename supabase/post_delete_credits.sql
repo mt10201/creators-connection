@@ -1,15 +1,38 @@
 -- Credit clawback when a post is deleted.
--- Run this in the Supabase SQL Editor. Safe to re-run.
---
--- Creating a post awards +5 credits (see award_post_credits in schema.sql), so
--- deleting one has to give them back. This lives in a trigger rather than the
--- delete server action for two reasons: credit_transactions has no insert
--- policy, so only a security definer function may write to it, and a trigger
--- fires on every delete path, including someone calling the REST API directly.
+-- Prefer running credits_hybrid.sql, which replaces this with the full hybrid
+-- clawback (post + engagement credits). This file remains safe to re-run and
+-- installs a compatible clawback if credits_hybrid.sql has not been applied.
 
--- The clawback looks up the post's own ledger rows, so make that cheap.
 create index if not exists credit_transactions_post_id_idx
   on public.credit_transactions (post_id);
+
+alter table public.credit_transactions
+  add column if not exists available_at timestamptz;
+
+alter table public.credit_transactions
+  add column if not exists source_user_id uuid references public.users (id) on delete set null;
+
+update public.credit_transactions
+set available_at = created_at
+where available_at is null;
+
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'credit_transactions'
+      and column_name = 'available_at'
+  ) then
+    execute 'alter table public.credit_transactions alter column available_at set default now()';
+    begin
+      execute 'alter table public.credit_transactions alter column available_at set not null';
+    exception
+      when others then null;
+    end;
+  end if;
+end
+$$;
 
 create or replace function public.claw_back_post_credits()
 returns trigger
@@ -26,21 +49,22 @@ begin
     return old;
   end if;
 
-  -- Net of what this post earned and anything already taken back, so posts that
-  -- predate the award trigger (no ledger row) are left alone. Restricted to the
-  -- two post lifecycle reasons: other spend tied to a post must not shrink it.
   select coalesce(sum(amount), 0)
   into v_outstanding
   from public.credit_transactions
   where post_id = old.id
-    and reason in ('post_created', 'post_deleted');
+    and user_id = old.creator_id
+    and reason in (
+      'post_created',
+      'post_deleted',
+      'engagement_like',
+      'engagement_save'
+    );
 
   if v_outstanding <= 0 then
     return old;
   end if;
 
-  -- Locks the profile so two deletes in flight at once can't both read the same
-  -- balance and each subtract from it.
   select coalesce(credit_balance, 0)
   into v_balance
   from public.users
@@ -51,19 +75,22 @@ begin
     return old;
   end if;
 
-  -- Balances never go negative. If the credits were already spent, take back
-  -- whatever is left so the ledger still sums to the stored balance, and skip
-  -- the transaction entirely at zero rather than recording a no-op.
   v_clawback := least(v_outstanding, v_balance);
 
   if v_clawback <= 0 then
     return old;
   end if;
 
-  -- post_id is set for the audit trail; the foreign key nulls it out a moment
-  -- later when the post row goes, exactly as it does for the post_created row.
-  insert into public.credit_transactions (user_id, amount, reason, post_id)
-  values (old.creator_id, -v_clawback, 'post_deleted', old.id);
+  insert into public.credit_transactions (
+    user_id, amount, reason, post_id, available_at
+  )
+  values (
+    old.creator_id,
+    -v_clawback,
+    'post_deleted',
+    old.id,
+    now()
+  );
 
   update public.users
   set credit_balance = v_balance - v_clawback
@@ -73,8 +100,6 @@ begin
 end;
 $$;
 
--- Must be BEFORE DELETE: after the row is gone the post_id foreign key on the
--- new transaction would have nothing to point at.
 drop trigger if exists on_post_deleted_claw_back_credits on public.posts;
 create trigger on_post_deleted_claw_back_credits
   before delete on public.posts

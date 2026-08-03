@@ -86,8 +86,8 @@ export default function DeletePostButton({ postId, title }: Props) {
               className="mt-3 text-sm leading-relaxed text-ink-muted"
             >
               This removes the post from Explore for good, along with its images,
-              video, likes, and saves. The 5 credits it earned come back out of
-              your balance. It can’t be undone.
+              video, likes, and saves. Credits earned from this post (and its
+              likes/saves) come back out of your balance. It can’t be undone.
             </p>
 
             {error && (

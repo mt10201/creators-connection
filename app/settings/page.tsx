@@ -65,7 +65,8 @@ export default async function SettingsPage() {
             Settings
           </h1>
           <p className="mt-2 max-w-md text-sm leading-relaxed text-ink-muted">
-            Update your public details and sign-in password.
+            Update your public details and sign-in password, or permanently
+            delete your account.
           </p>
         </div>
       </section>

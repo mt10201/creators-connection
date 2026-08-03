@@ -26,10 +26,12 @@ const postIncludes = [
 ];
 
 const earnCredits = [
-  "Post a new product to the community",
-  "Complete your creator profile",
-  "Engage thoughtfully with other makers' work",
-  "Refer a fellow creator who joins and posts",
+  "+5 credits once when you create an account (signup bonus)",
+  "+1 credit the first time you post a given product URL",
+  "+1 credit to you when someone likes your post (max +10 per post from likes)",
+  "+2 credits to you when someone saves your post (max +10 per post from saves)",
+  "Credits become spendable after 24 hours",
+  "Up to 10 product posts per day",
 ];
 
 const spendCredits = [
@@ -92,8 +94,10 @@ export default function HowItWorksPage() {
               </h2>
               <p className="mt-3 text-[0.95rem] leading-[1.85] text-ink-muted">
                 Share something you&apos;ve made — a physical product, a digital
-                tool, a piece of art, or anything original. Great posts help
-                other makers learn from your process and discover your work.
+                tool, a piece of art, or anything original. The first time you
+                post a given product link you earn 1 credit; likes and saves
+                from others earn more. Great posts help other makers learn from
+                your process and discover your work.
               </p>
               <div className="mt-6 rounded-[1.25rem] border border-sand bg-parchment/70 p-6">
                 <span className="eyebrow text-terracotta">
@@ -142,7 +146,8 @@ export default function HowItWorksPage() {
               <p className="mt-3 text-[0.95rem] leading-[1.85] text-ink-muted">
                 Credits keep Creators Connection balanced — rewarding people who
                 contribute to the community while giving everyone access to
-                powerful discovery tools.
+                powerful discovery tools. New credits become spendable after 24
+                hours.
               </p>
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
                 <div className="rounded-[1.25rem] border border-terracotta/15 bg-terracotta-soft/40 p-6">

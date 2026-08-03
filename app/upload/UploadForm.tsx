@@ -141,12 +141,19 @@ export default function UploadForm({ userId }: { userId: string }) {
     });
 
     if (!result.ok) {
-      setError(result.message);
+      setError(
+        result.message.trim() ||
+          "Could not save your post. Please try again."
+      );
       setLoading(false);
       return;
     }
 
-    setSuccess("Product posted! You earned 5 credits. Redirecting…");
+    setSuccess(
+      result.awardedPostCredit
+        ? "Product posted! You earned 1 credit (spendable in 24 hours). Redirecting…"
+        : "Product posted! This product link already earned a post credit, so no new one was added. Redirecting…"
+    );
     router.push("/explore");
     router.refresh();
   }
@@ -160,8 +167,8 @@ export default function UploadForm({ userId }: { userId: string }) {
             Share your <em className="italic text-terracotta">product</em>
           </h1>
           <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-ink-muted">
-            Post your work for the community to discover — you&apos;ll earn 5
-            credits for sharing.
+            Post your work for the community to discover — a new product link
+            earns 1 credit (spendable after 24 hours).
           </p>
         </div>
 

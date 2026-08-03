@@ -196,8 +196,8 @@ export default async function DashboardPage({
             </p>
             <p className="mt-4 max-w-lg text-sm leading-relaxed text-ink-muted">
               {credits === 0
-                ? "Publish your first product and 5 credits land here straight away. Use them to boost visibility as the system grows."
-                : "Earn 5 credits each time you publish. Use them to boost visibility as the system grows."}
+                ? "New accounts get a 5-credit welcome bonus. Publish a new product link for +1, then earn more when others like and save your work. Credits become spendable after 24 hours."
+                : "Credits come from your signup bonus, first-time product links, and likes/saves on your posts. New credits become spendable after 24 hours."}
             </p>
           </div>
 
@@ -253,7 +253,7 @@ export default async function DashboardPage({
                 mark="post"
                 eyebrow="Nothing posted yet"
                 title="Your first product is waiting"
-                description="Upload something you've made to earn credits and show up in the Explore feed. There's no bar to clear here — work in progress is welcome."
+                description="Upload something you've made to show up in Explore. A new product link earns 1 credit; likes and saves from others earn more. Work in progress is welcome."
                 footer={<OnboardingSteps steps={firstPostSteps} />}
               >
                 <Link href="/upload" className="btn-primary">

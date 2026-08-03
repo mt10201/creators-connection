@@ -67,8 +67,8 @@ export async function deletePost(postId: string): Promise<DeletePostResult> {
 
   // Likes and saves are removed by the cascading foreign keys, which is the only
   // way to clear other people's rows: RLS limits each user to their own. The
-  // delete trigger also takes back the +5 credits the post earned, so the
-  // clawback holds even if this action is bypassed.
+  // delete trigger claws back post/engagement credits tied to this post, so
+  // the clawback holds even if this action is bypassed.
   const { count, error: deleteError } = await supabase
     .from("posts")
     .delete({ count: "exact" })
