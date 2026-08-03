@@ -158,37 +158,30 @@ export type BoostRailItem = {
 };
 
 /**
- * Reserved Just landed strip on Explore (Fresh Push). Boost-only by design:
- * with no active Fresh Push there is no strip, so organic results keep the
- * whole page and organic ordering is never touched.
+ * Every post with an active Fresh Push, most recently boosted first. Used by
+ * the Just landed strip above the Explore grid. Boost-only by design: with no
+ * active Fresh Push the strip is empty and organic results keep the whole page.
  */
 export async function loadExploreBoostedPosts(
   supabase: SupabaseClient,
-  {
-    limit = 4,
-    category,
-    excludeIds = [],
-  }: { limit?: number; category?: string | null; excludeIds?: string[] } = {}
+  { category }: { category?: string | null } = {}
 ): Promise<BoostRailItem[]> {
   const { data, error } = await supabase
     .from("active_boosts")
-    .select("post_id, label, ends_at")
+    .select("post_id, label, starts_at")
     .eq("scope", "explore_first_page")
-    .order("ends_at", { ascending: false })
-    .limit(limit + excludeIds.length);
+    .order("starts_at", { ascending: false });
 
   if (error) {
     console.error("Failed to load Explore boosts:", error.message);
     return [];
   }
 
-  const rows = ((data ?? []) as { post_id: string; label: string }[]).filter(
-    (row) => !excludeIds.includes(row.post_id)
-  );
-
+  const rows = (data ?? []) as { post_id: string; label: string }[];
   if (rows.length === 0) return [];
 
   const labelByPost = new Map(rows.map((row) => [row.post_id, row.label]));
+  // loadPostsByIds preserves the id order, so boost recency carries through.
   const posts = await loadPostsByIds(
     supabase,
     rows.map((row) => row.post_id)
@@ -196,7 +189,6 @@ export async function loadExploreBoostedPosts(
 
   return posts
     .filter((post) => !category || post.category === category)
-    .slice(0, limit)
     .map((post) => ({
       post,
       boostLabel: labelByPost.get(post.id) ?? "Boosted",

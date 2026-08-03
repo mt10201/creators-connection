@@ -16,14 +16,13 @@ export const firstPostSteps: Step[] = [
       "Add a few photos or a short clip, a title, and a product link. About a minute of work.",
   },
   {
-    title: "Earn +1 for a new product link",
+    title: "Earn credits",
     description:
-      "The first time you post a given product URL you earn +1 credit — not +5. Likes give the owner +1 and saves +2 (each capped per post). Credits are spendable after 24 hours.",
+      "+1 the first time you post a given product URL, +1 when someone likes it, +2 when someone saves it (both capped). Full rules on How It Works.",
   },
   {
     title: "Get discovered",
-    description:
-      "Your post lands in Explore. You can post up to 10 products per day.",
+    description: "Your post lands in Explore for the community to find.",
   },
 ];
 
@@ -31,18 +30,16 @@ export const firstPostSteps: Step[] = [
 export const joinSteps: Step[] = [
   {
     title: "Create an account",
-    description:
-      "Sign up with email and a username — you get +5 credits once as a welcome bonus.",
+    description: "Sign up with an email and a username. It takes a minute.",
   },
   {
     title: "Post something you made",
-    description:
-      "Photos or a short clip, a title, and a link. A new product URL earns +1 (you can post up to 10 per day).",
+    description: "Photos or a short clip, a title, and a product link.",
   },
   {
-    title: "Earn more from engagement",
+    title: "Earn credits",
     description:
-      "When others like your post you earn +1; when they save it you earn +2 (capped per post). Credits become spendable after 24 hours.",
+      "+1 the first time you post a given product URL, +1 per like, +2 per save (both capped). Full rules on How It Works.",
   },
 ];
 

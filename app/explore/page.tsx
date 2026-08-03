@@ -11,7 +11,11 @@ import OnboardingSteps, {
 } from "@/app/components/OnboardingSteps";
 import CategoryFilters from "@/app/components/CategoryFilters";
 import ExploreSearch from "@/app/components/ExploreSearch";
-import ExploreBoostedSlots from "@/app/components/ExploreBoostedSlots";
+import {
+  loadCreatorNames,
+  loadExploreBoostedPosts,
+  type BoostRailItem,
+} from "@/lib/boosts";
 
 const exploreDescription =
   "Discover original work from independent creators — browse product posts for inspiration.";
@@ -112,32 +116,29 @@ export default async function ExplorePage({
   const { data, error } = await query;
   const posts = (data ?? []) as PostRow[];
 
-  const creatorIds = [
-    ...new Set(posts.map((post) => post.creator_id).filter(Boolean)),
-  ] as string[];
+  // The Just landed strip is its own section above the grid, so the organic
+  // grid stays a single uninterrupted list with no reserved placeholders.
+  const boostedItems: BoostRailItem[] = searchQuery
+    ? []
+    : await loadExploreBoostedPosts(supabase, {
+        category: activeCategory === "All" ? null : activeCategory,
+      });
 
-  const creatorNames = new Map<string, string>();
-  if (creatorIds.length > 0) {
-    const { data: profiles, error: profilesError } = await supabase
-      .from("public_profiles")
-      .select("id, username")
-      .in("id", creatorIds);
-
-    if (profilesError) {
-      console.error("Failed to load creator profiles:", profilesError.message);
-    }
-
-    for (const profile of profiles ?? []) {
-      const name = profile.username?.trim();
-      if (name) creatorNames.set(profile.id, name);
-    }
-  }
+  const creatorNames = await loadCreatorNames(supabase, [
+    ...posts.map((post) => post.creator_id),
+    ...boostedItems.map((item) => item.post.creator_id),
+  ]);
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const postIds = posts.map((post) => post.id);
+  const postIds = [
+    ...new Set([
+      ...posts.map((post) => post.id),
+      ...boostedItems.map((item) => item.post.id),
+    ]),
+  ];
   const likedIds = new Set<string>();
   const savedIds = new Set<string>();
 
@@ -158,10 +159,6 @@ export default async function ExplorePage({
     for (const row of likes ?? []) likedIds.add(row.post_id);
     for (const row of saves ?? []) savedIds.add(row.post_id);
   }
-
-  // Positions 1–4 stay organic; boosted slots are inserted after them.
-  const leadPosts = posts.slice(0, 4);
-  const remainingPosts = posts.slice(4);
 
   const clearSearchHref =
     activeCategory === "All"
@@ -208,6 +205,46 @@ export default async function ExplorePage({
         active={activeCategory}
         query={searchQuery}
       />
+
+      {/* Reserved Just landed strip: sits above the organic grid, never inside
+          it, and is omitted entirely when no Fresh Push is running. */}
+      {boostedItems.length > 0 && (
+        <section
+          aria-label="Just landed — boosted posts"
+          className="px-5 pt-10 sm:px-8 sm:pt-12"
+        >
+          <div className="mx-auto max-w-7xl rounded-[1.5rem] border border-ochre/25 bg-ochre/5 p-5 sm:p-6">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="flex items-center gap-2 font-display text-lg font-semibold tracking-tight">
+                <span className="inline-flex items-center rounded-full bg-ochre px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-cream">
+                  Boosted
+                </span>
+                Just landed
+              </h2>
+              <p className="text-xs text-ink-faint">
+                Labeled boosts paid for with earned credits. Organic ranking is
+                unaffected.
+              </p>
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-7 xl:grid-cols-4">
+              {boostedItems.map(({ post, boostLabel }) => (
+                <ProductCard
+                  key={`boost-${post.id}`}
+                  post={post}
+                  creatorName={
+                    post.creator_id ? creatorNames.get(post.creator_id) : null
+                  }
+                  isLoggedIn={Boolean(user)}
+                  liked={likedIds.has(post.id)}
+                  saved={savedIds.has(post.id)}
+                  boostLabel={boostLabel ?? "Boosted"}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="px-5 py-10 sm:px-8 sm:py-12">
         <div className="mx-auto max-w-7xl">
@@ -286,10 +323,8 @@ export default async function ExplorePage({
             )
           ) : (
             <div className="animate-fade-in">
-              {/* The opening organic row keeps positions 1–4; boosted slots
-                  sit below it and never reorder these results. */}
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-7 xl:grid-cols-4">
-                {leadPosts.map((post, index) => (
+                {posts.map((post, index) => (
                   <ProductCard
                     key={post.id}
                     post={post}
@@ -303,32 +338,6 @@ export default async function ExplorePage({
                   />
                 ))}
               </div>
-
-              {!searchQuery && (
-                <ExploreBoostedSlots
-                  excludeIds={leadPosts.map((post) => post.id)}
-                  category={activeCategory === "All" ? null : activeCategory}
-                />
-              )}
-
-              {remainingPosts.length > 0 && (
-                <div className="mt-6 grid grid-cols-1 gap-5 sm:mt-7 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-7 xl:grid-cols-4">
-                  {remainingPosts.map((post) => (
-                    <ProductCard
-                      key={post.id}
-                      post={post}
-                      creatorName={
-                        post.creator_id
-                          ? creatorNames.get(post.creator_id)
-                          : null
-                      }
-                      isLoggedIn={Boolean(user)}
-                      liked={likedIds.has(post.id)}
-                      saved={savedIds.has(post.id)}
-                    />
-                  ))}
-                </div>
-              )}
             </div>
           )}
         </div>

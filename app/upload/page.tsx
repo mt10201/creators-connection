@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { loadBoostProducts } from "@/lib/boosts";
 import UploadForm from "./UploadForm";
 
 export const metadata: Metadata = {
@@ -22,18 +21,5 @@ export default async function UploadPage() {
     redirect("/login?redirectTo=/upload");
   }
 
-  const [boostProducts, { data: summary }] = await Promise.all([
-    loadBoostProducts(supabase),
-    supabase.rpc("my_credit_summary").maybeSingle(),
-  ]);
-
-  return (
-    <UploadForm
-      userId={user.id}
-      freshPush={
-        boostProducts.find((product) => product.slug === "fresh_push") ?? null
-      }
-      spendable={(summary as { spendable: number } | null)?.spendable ?? 0}
-    />
-  );
+  return <UploadForm userId={user.id} />;
 }

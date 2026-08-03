@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { productCategories, type ProductCategory } from "@/lib/categories";
 import {
@@ -13,29 +13,16 @@ import {
   validateProductUrl,
   validateVideo,
 } from "@/lib/posts";
-import type { BoostProduct } from "@/lib/boosts";
 import TagInput from "@/app/components/TagInput";
 import Spinner from "@/app/components/Spinner";
-import BoostDialog from "@/app/components/BoostDialog";
-import Link from "next/link";
 
 const inputClass = "form-input";
 const labelClass = "form-label";
 
-type UploadFormProps = {
-  userId: string;
-  /** Offered right after a successful post; null when the product is disabled. */
-  freshPush: BoostProduct | null;
-  spendable: number;
-};
-
-export default function UploadForm({
-  userId,
-  freshPush,
-  spendable,
-}: UploadFormProps) {
+export default function UploadForm({ userId }: { userId: string }) {
   const router = useRouter();
   const [postedId, setPostedId] = useState<string | null>(null);
+  const submittedRef = useRef(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [productUrl, setProductUrl] = useState("");
@@ -48,6 +35,9 @@ export default function UploadForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  /** Locks the form once a post exists, so Publish can't run twice. */
+  const published = postedId !== null;
 
   useEffect(() => {
     const urls = images.map((image) => URL.createObjectURL(image));
@@ -118,6 +108,11 @@ export default function UploadForm({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    // One post per session: the ref beats the state update race that a fast
+    // double-click (or a re-fired submit) would otherwise slip through.
+    if (submittedRef.current || loading || postedId) return;
+
     setError(null);
     setSuccess(null);
 
@@ -145,7 +140,9 @@ export default function UploadForm({
       }
     }
 
+    submittedRef.current = true;
     setLoading(true);
+
 
     const supabase = createClient();
     const result = await createPost(supabase, userId, {
@@ -159,6 +156,8 @@ export default function UploadForm({
     });
 
     if (!result.ok) {
+      // Nothing was created, so allow another attempt.
+      submittedRef.current = false;
       setError(
         result.message.trim() ||
           "Could not save your post. Please try again."
@@ -171,18 +170,11 @@ export default function UploadForm({
       ? "You earned 1 credit (spendable in 24 hours)."
       : "This product link already earned a post credit, so no new one was added.";
 
-    // With a boost on offer we stay put so the creator can act on it; without
-    // one there is nothing left to do here.
-    if (freshPush) {
-      setSuccess(`Product posted! ${creditNote}`);
-      setPostedId(result.postId);
-      setLoading(false);
-      router.refresh();
-      return;
-    }
-
+    // Lock Publish immediately, then leave the upload form so it can't be
+    // submitted again. Boost from the product page instead.
+    setPostedId(result.postId);
     setSuccess(`Product posted! ${creditNote} Redirecting…`);
-    router.push("/explore");
+    router.push("/dashboard");
     router.refresh();
   }
 
@@ -210,38 +202,6 @@ export default function UploadForm({
           {success && (
             <div role="status" className="form-alert-success mb-6">
               {success}
-            </div>
-          )}
-
-          {postedId && freshPush && (
-            <div className="mb-6 rounded-2xl border border-ochre/30 bg-ochre/5 px-5 py-4">
-              <span className="eyebrow text-ochre">Optional</span>
-              <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">
-                {freshPush.name} places this post in a labeled Just landed strip
-                on Explore for {freshPush.duration_hours} hours —{" "}
-                {freshPush.cost_credits} credits. You have {spendable}{" "}
-                spendable.
-              </p>
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                <BoostDialog
-                  postId={postedId}
-                  products={[freshPush]}
-                  spendable={spendable}
-                  triggerLabel={`Boost with ${freshPush.name}`}
-                />
-                <Link
-                  href={`/products/${postedId}`}
-                  className="text-sm text-terracotta underline-offset-4 hover:underline"
-                >
-                  View my post →
-                </Link>
-                <Link
-                  href="/explore"
-                  className="text-sm text-ink-muted underline-offset-4 hover:text-terracotta hover:underline"
-                >
-                  Go to Explore
-                </Link>
-              </div>
             </div>
           )}
 
@@ -477,11 +437,15 @@ export default function UploadForm({
 
             <button
               type="submit"
-              disabled={loading}
-              className="btn-primary btn-lg w-full"
+              disabled={loading || published}
+              className="btn-primary btn-lg w-full disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading && <Spinner />}
-              {loading ? "Publishing…" : "Publish Product"}
+              {published
+                ? "Published"
+                : loading
+                  ? "Publishing…"
+                  : "Publish Product"}
             </button>
           </form>
         </div>

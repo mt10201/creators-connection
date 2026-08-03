@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SITE_NAME, truncateMeta } from "@/lib/site";
 import {
-  formatBoostTimeLeft,
   loadActiveBoostForPost,
   loadBoostProducts,
   type ActiveBoost,
@@ -12,7 +11,7 @@ import {
 } from "@/lib/boosts";
 import Avatar from "@/app/components/Avatar";
 import PostActions from "@/app/components/PostActions";
-import BoostDialog from "@/app/components/BoostDialog";
+import OwnerBoostPanel from "@/app/components/OwnerBoostPanel";
 import DeletePostButton from "@/app/components/DeletePostButton";
 import ProductGallery from "./ProductGallery";
 
@@ -265,39 +264,12 @@ export default async function ProductPage({ params }: Props) {
             </div>
 
             {isOwner && (
-              <div className="mt-5 rounded-2xl border border-ochre/30 bg-ochre/5 px-5 py-4">
-                {activeBoost ? (
-                  <>
-                    <span className="inline-flex items-center rounded-full bg-ochre px-2.5 py-1 text-[0.7rem] font-semibold uppercase tracking-wide text-cream">
-                      {activeBoost.label}
-                    </span>
-                    <p className="mt-2 text-sm leading-relaxed text-ink-muted">
-                      This post is running a boost —{" "}
-                      {formatBoostTimeLeft(activeBoost.ends_at)}. Buyers see the
-                      label too, and organic ranking is unchanged.
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-sm leading-relaxed text-ink-muted">
-                      Spend earned credits to place this post in a labeled,
-                      reserved slot for a fixed window. You have{" "}
-                      <span className="font-semibold text-ink">
-                        {spendable} spendable{" "}
-                        {spendable === 1 ? "credit" : "credits"}
-                      </span>
-                      .
-                    </p>
-                    <div className="mt-3">
-                      <BoostDialog
-                        postId={post.id}
-                        products={boostProducts}
-                        spendable={spendable}
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
+              <OwnerBoostPanel
+                postId={post.id}
+                products={boostProducts}
+                spendable={spendable}
+                activeBoost={activeBoost}
+              />
             )}
 
             {post.description && (

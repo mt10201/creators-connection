@@ -214,7 +214,7 @@ export default async function ProfilePage({ params }: Props) {
               }
               description={
                 isOwnProfile
-                  ? "This page is your portfolio — it fills in as you publish. New product URLs earn +1 (not +5 per post). Likes earn +1 and saves +2 for you, with caps per post."
+                  ? "This page is your portfolio — it fills in as you publish. New product URLs earn +1. Likes earn +1 and saves +2 for you, with caps per post."
                   : "Check back soon — new work shows up here as it's published. In the meantime, the feed is full of things worth seeing."
               }
               footer={
