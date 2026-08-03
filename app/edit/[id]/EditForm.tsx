@@ -15,6 +15,8 @@ import {
   validateProductUrl,
   validateVideo,
 } from "@/lib/posts";
+import { sanitizeTags } from "@/lib/tags";
+import TagInput from "@/app/components/TagInput";
 import Spinner from "@/app/components/Spinner";
 
 const inputClass = "form-input";
@@ -26,6 +28,7 @@ export type EditablePost = {
   description: string;
   product_link: string;
   category: ProductCategory;
+  tags: string[];
   media_urls: string[];
   media_paths: string[];
   video_url: string | null;
@@ -44,6 +47,7 @@ export default function EditForm({
   const [description, setDescription] = useState(post.description);
   const [productUrl, setProductUrl] = useState(post.product_link);
   const [category, setCategory] = useState<ProductCategory | "">(post.category);
+  const [tags, setTags] = useState<string[]>(() => sanitizeTags(post.tags));
   const [keptImages, setKeptImages] = useState<ExistingMedia[]>(() =>
     post.media_urls
       .map((url, index) => ({
@@ -180,6 +184,7 @@ export default function EditForm({
         description,
         productUrl,
         category,
+        tags,
         keepImages: keptImages,
         newImages,
         keepVideo: removeVideo || newVideo ? null : keptVideo,
@@ -296,6 +301,8 @@ export default function EditForm({
                 ))}
               </select>
             </div>
+
+            <TagInput tags={tags} onChange={setTags} disabled={loading} />
 
             <div>
               <span className={labelClass}>

@@ -13,6 +13,7 @@ import {
   validateProductUrl,
   validateVideo,
 } from "@/lib/posts";
+import TagInput from "@/app/components/TagInput";
 import Spinner from "@/app/components/Spinner";
 
 const inputClass = "form-input";
@@ -24,6 +25,7 @@ export default function UploadForm({ userId }: { userId: string }) {
   const [description, setDescription] = useState("");
   const [productUrl, setProductUrl] = useState("");
   const [category, setCategory] = useState<ProductCategory | "">("");
+  const [tags, setTags] = useState<string[]>([]);
   const [images, setImages] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [video, setVideo] = useState<File | null>(null);
@@ -136,6 +138,7 @@ export default function UploadForm({ userId }: { userId: string }) {
       description,
       productUrl,
       category,
+      tags,
       images,
       video,
     });
@@ -265,6 +268,8 @@ export default function UploadForm({ userId }: { userId: string }) {
                 ))}
               </select>
             </div>
+
+            <TagInput tags={tags} onChange={setTags} disabled={loading} />
 
             <div>
               <span className={labelClass}>

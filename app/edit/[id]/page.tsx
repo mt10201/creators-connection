@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { productCategories, type ProductCategory } from "@/lib/categories";
+import { sanitizeTags } from "@/lib/tags";
 import EditForm, { type EditablePost } from "./EditForm";
 
 type Props = { params: Promise<{ id: string }> };
@@ -32,13 +33,26 @@ export default async function EditPostPage({ params }: Props) {
     redirect(`/login?redirectTo=/edit/${id}`);
   }
 
-  const { data: post } = await supabase
+  const withTags = await supabase
     .from("posts")
     .select(
-      "id, product_title, description, product_link, category, media_urls, media_paths, video_url, video_path, creator_id, status"
+      "id, product_title, description, product_link, category, tags, media_urls, media_paths, video_url, video_path, creator_id, status"
     )
     .eq("id", id)
     .maybeSingle();
+
+  // Fall back if post_tags.sql hasn't been applied yet.
+  const post =
+    withTags.data ??
+    (
+      await supabase
+        .from("posts")
+        .select(
+          "id, product_title, description, product_link, category, media_urls, media_paths, video_url, video_path, creator_id, status"
+        )
+        .eq("id", id)
+        .maybeSingle()
+    ).data;
 
   if (!post || post.status !== "active") {
     notFound();
@@ -52,12 +66,16 @@ export default async function EditPostPage({ params }: Props) {
     ? post.category
     : productCategories[0];
 
+  const rawTags = (post as { tags?: unknown }).tags;
+  const tags = sanitizeTags(Array.isArray(rawTags) ? (rawTags as string[]) : []);
+
   const editable: EditablePost = {
     id: post.id,
     product_title: post.product_title?.trim() || "",
     description: post.description?.trim() || "",
     product_link: post.product_link?.trim() || "",
     category,
+    tags,
     media_urls: (post.media_urls ?? []).filter(Boolean),
     media_paths: ((post.media_paths ?? []) as string[]).filter(
       (path) => typeof path === "string"

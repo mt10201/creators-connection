@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { trackEvent } from "@/lib/analytics";
 import type { ProductCategory } from "./categories";
+import { sanitizeTags } from "./tags";
 
 export const PRODUCT_IMAGES_BUCKET = "product-images";
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -25,6 +26,8 @@ export type NewPost = {
   images: File[];
   /** Optional ≤3s clip. */
   video?: File | null;
+  /** Optional short search tags (max 8). */
+  tags?: string[];
 };
 
 export function validateImage(file: File): string | null {
@@ -315,6 +318,8 @@ export async function createPost(
     ? storage.getPublicUrl(videoPath).data.publicUrl
     : null;
 
+  const tags = sanitizeTags(post.tags ?? []);
+
   const { data, error: insertError } = await supabase
     .from("posts")
     .insert({
@@ -323,6 +328,7 @@ export async function createPost(
       description: post.description.trim(),
       product_link: post.productUrl.trim(),
       category: post.category,
+      tags,
       media_urls: mediaUrls,
       media_paths: paths,
       video_url: videoUrl,
@@ -378,6 +384,7 @@ export type UpdatePostInput = {
   description: string;
   productUrl: string;
   category: ProductCategory;
+  tags?: string[];
   /** Existing images kept (order preserved). */
   keepImages: ExistingMedia[];
   /** Newly added image files, appended after keepImages. */
@@ -474,6 +481,8 @@ export async function updatePost(
     return { ok: false, message: "A valid product link is required." };
   }
 
+  const tags = sanitizeTags(input.tags ?? []);
+
   const { error: updateError } = await supabase
     .from("posts")
     .update({
@@ -482,6 +491,7 @@ export async function updatePost(
       product_link: input.productUrl.trim(),
       // Edits never award post credits; only create does.
       category: input.category,
+      tags,
       media_urls: finalUrls,
       media_paths: finalPaths,
       video_url: videoUrl,

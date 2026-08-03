@@ -217,6 +217,12 @@ alter table public.posts add column if not exists media_paths text[] not null de
 alter table public.posts add column if not exists video_url text;
 alter table public.posts add column if not exists video_path text;
 
+-- Optional search tags. tags_search is maintained by trigger in post_tags.sql.
+alter table public.posts
+  add column if not exists tags text[] not null default '{}';
+alter table public.posts
+  add column if not exists tags_search text not null default '';
+
 create index if not exists posts_creator_id_idx on public.posts (creator_id);
 create index if not exists posts_category_idx on public.posts (category);
 create index if not exists posts_created_at_idx on public.posts (created_at desc);

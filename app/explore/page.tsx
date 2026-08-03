@@ -97,6 +97,7 @@ export default async function ExplorePage({
     const filters = [
       `product_title.ilike."${pattern}"`,
       `description.ilike."${pattern}"`,
+      `tags_search.ilike."${pattern}"`,
     ];
 
     const matchedCreatorIds = (matchedCreators ?? []).map((row) => row.id);
