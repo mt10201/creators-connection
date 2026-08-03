@@ -16,7 +16,7 @@ async function getPost(id: string) {
   const { data: post } = await supabase
     .from("posts")
     .select(
-      "id, product_title, description, category, tags, product_link, media_urls, video_url, creator_id, created_at, like_count, save_count"
+      "id, product_title, description, category, product_link, media_urls, video_url, creator_id, created_at, like_count, save_count"
     )
     .eq("id", id)
     .maybeSingle();
@@ -223,21 +223,6 @@ export default async function ProductPage({ params }: Props) {
                 </>
               )}
             </div>
-
-            {Array.isArray(post.tags) && post.tags.length > 0 && (
-              <ul className="mt-6 flex flex-wrap gap-2">
-                {(post.tags as string[]).map((tag) => (
-                  <li key={tag}>
-                    <Link
-                      href={`/explore?q=${encodeURIComponent(tag)}`}
-                      className="chip border-sand bg-parchment/80 text-ink-muted hover:border-terracotta/40 hover:text-terracotta"
-                    >
-                      {tag}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
 
             {post.description && (
               <div className="rule-double mt-7 pt-7">
