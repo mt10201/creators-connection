@@ -40,6 +40,7 @@ const spendRules = [
   `Boosts are bought with vested credits only — ${BOOST_CAPS.purchasesPer24h} purchases per 24 hours`,
   `${BOOST_CAPS.activePerPost} active boost per post, ${BOOST_CAPS.concurrentPerAccount} running at a time per account`,
   "Every boosted item carries a visible “Boosted” or “Featured” label",
+  "Fresh Push is a launch window — only posts under 24 hours old qualify",
   "The first four Explore results are always organic and can’t be bought",
   "Explore Spotlight slots are coming later and are switched off today",
 ];
@@ -239,10 +240,10 @@ export default async function HowItWorksPage() {
                 </ul>
                 <p className="mt-4 text-sm leading-relaxed text-ink-muted">
                   Boosts only fill reserved, labeled slots — the Just landed
-                  strip on Explore and the homepage banner. The first four
-                  Explore results always stay organic, organic ranking never
-                  takes a boost into account, and when nobody has boosted, the
-                  Just landed strip simply doesn’t appear.
+                  strip on Explore and the homepage banner. The Explore feed
+                  itself is ranked on engagement, recency, and a small new-maker
+                  bonus, with no boost input at all, and when nobody has
+                  boosted, the Just landed strip simply doesn’t appear.
                 </p>
               </div>
             </div>

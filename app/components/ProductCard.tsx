@@ -1,6 +1,8 @@
 import Link from "next/link";
 import PostActions from "./PostActions";
 import ProductCardMedia from "./ProductCardMedia";
+import ImpressionTracker from "./ImpressionTracker";
+import { isBoostedSurface, type TrackingSurface } from "@/lib/tracking";
 
 export type ProductCardPost = {
   id: string;
@@ -24,6 +26,8 @@ type Props = {
   priority?: boolean;
   /** "Boosted" / "Featured" — always shown when the card sits in a paid rail. */
   boostLabel?: string | null;
+  /** Set on discovery feeds to count impressions; omitted elsewhere. */
+  impressionSurface?: TrackingSurface | null;
 };
 
 export default function ProductCard({
@@ -35,6 +39,7 @@ export default function ProductCard({
   saved,
   priority = false,
   boostLabel = null,
+  impressionSurface = null,
 }: Props) {
   const coverImage = post.media_urls?.[0] ?? null;
   const extraImages = (post.media_urls?.length ?? 0) - 1;
@@ -42,6 +47,14 @@ export default function ProductCard({
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-card border border-sand bg-cream shadow-soft transition duration-300 ease-out will-change-transform hover:-translate-y-1.5 hover:border-clay hover:shadow-lift focus-within:border-clay focus-within:shadow-lift">
+      {impressionSurface && post.id && (
+        <ImpressionTracker
+          postId={post.id}
+          surface={impressionSurface}
+          isBoosted={isBoostedSurface(impressionSurface)}
+        />
+      )}
+
       <div className="p-2.5 pb-0">
         <ProductCardMedia
           href={`/products/${post.id}`}

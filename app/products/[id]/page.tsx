@@ -13,6 +13,8 @@ import Avatar from "@/app/components/Avatar";
 import PostActions from "@/app/components/PostActions";
 import OwnerBoostPanel from "@/app/components/OwnerBoostPanel";
 import DeletePostButton from "@/app/components/DeletePostButton";
+import ImpressionTracker from "@/app/components/ImpressionTracker";
+import OutboundProductLink from "@/app/components/OutboundProductLink";
 import ProductGallery from "./ProductGallery";
 
 type Props = { params: Promise<{ id: string }> };
@@ -204,6 +206,8 @@ export default async function ProductPage({ params }: Props) {
 
           {/* Sticky on desktop so the buy action stays reachable beside a tall gallery. */}
           <aside className="lg:sticky lg:top-28 lg:self-start">
+            <ImpressionTracker postId={post.id} surface="product" />
+
             {post.category && (
               <span className="eyebrow text-sage">{post.category}</span>
             )}
@@ -269,6 +273,7 @@ export default async function ProductPage({ params }: Props) {
                 products={boostProducts}
                 spendable={spendable}
                 activeBoost={activeBoost}
+                postCreatedAt={post.created_at}
               />
             )}
 
@@ -282,16 +287,15 @@ export default async function ProductPage({ params }: Props) {
             )}
 
             {post.product_link && (
-              <a
+              <OutboundProductLink
+                postId={post.id}
                 href={post.product_link}
-                target="_blank"
-                rel="noopener noreferrer"
                 className="btn-primary btn-lg mt-9 w-full max-lg:hidden"
               >
                 Visit Product Page
                 <span aria-hidden>↗</span>
                 <span className="sr-only">(opens in a new tab)</span>
-              </a>
+              </OutboundProductLink>
             )}
           </aside>
         </div>
@@ -300,16 +304,15 @@ export default async function ProductPage({ params }: Props) {
       {/* Keep the primary action reachable on long mobile pages. */}
       {post.product_link && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-sand bg-cream/95 px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:hidden">
-          <a
+          <OutboundProductLink
+            postId={post.id}
             href={post.product_link}
-            target="_blank"
-            rel="noopener noreferrer"
             className="btn-primary btn-lg w-full"
           >
             Visit Product Page
             <span aria-hidden>↗</span>
             <span className="sr-only">(opens in a new tab)</span>
-          </a>
+          </OutboundProductLink>
         </div>
       )}
     </div>

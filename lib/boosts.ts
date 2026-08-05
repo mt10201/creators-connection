@@ -36,12 +36,23 @@ export type BoostedPost = {
   media_urls: string[] | null;
   video_url: string | null;
   creator_id: string | null;
+  created_at: string | null;
   like_count: number | null;
   save_count: number | null;
 };
 
 const POST_COLUMNS =
-  "id, product_title, description, category, media_urls, video_url, creator_id, like_count, save_count";
+  "id, product_title, description, category, media_urls, video_url, creator_id, created_at, like_count, save_count";
+
+/** Fresh Push is a launch window: only posts under 24h old may show. */
+export const FRESH_PUSH_SLUG = "fresh_push";
+export const FRESH_PUSH_MAX_POST_AGE_HOURS = 24;
+
+export const FRESH_PUSH_TOO_OLD_REASON =
+  "Only for posts under 24 hours old";
+
+export const FRESH_PUSH_TOO_OLD_MESSAGE =
+  "Fresh Push is only available on posts less than 24 hours old. Try Home Feature, or boost a newer post.";
 
 const BOOST_ERRORS: Record<string, string> = {
   BOOST_NOT_AUTHENTICATED: "Please log in again to boost this post.",
@@ -53,6 +64,7 @@ const BOOST_ERRORS: Record<string, string> = {
   BOOST_POST_NEEDS_IMAGE: "Add at least one image to this post before boosting it.",
   BOOST_POST_INCOMPLETE:
     "Add a title, a description of at least 20 characters, and a product link before boosting.",
+  BOOST_POST_TOO_OLD: FRESH_PUSH_TOO_OLD_MESSAGE,
   BOOST_POST_ALREADY_BOOSTED:
     "This post already has an active boost. Wait for it to finish before buying another.",
   BOOST_TOO_MANY_ACTIVE: `You can run ${BOOST_CAPS.concurrentPerAccount} boosts at a time. Wait for one to end.`,
@@ -61,10 +73,25 @@ const BOOST_ERRORS: Record<string, string> = {
     "You don’t have enough spendable credits yet. Credits vest 24 hours after you earn them.",
 };
 
+/** True when a post is still inside the Fresh Push launch window. */
+export function isFreshPushEligible(
+  postCreatedAt: string | null | undefined,
+  now: number = Date.now()
+): boolean {
+  if (!postCreatedAt) return false;
+  const published = new Date(postCreatedAt).getTime();
+  if (!Number.isFinite(published)) return false;
+  return now - published < FRESH_PUSH_MAX_POST_AGE_HOURS * 3_600_000;
+}
+
 export function getBoostErrorMessage(raw: string | null | undefined): string {
   const haystack = raw ?? "";
   for (const [code, message] of Object.entries(BOOST_ERRORS)) {
     if (haystack.includes(code)) return message;
+  }
+  // Never surface raw BOOST_* codes if an unknown one slips through.
+  if (/BOOST_[A-Z0-9_]+/.test(haystack)) {
+    return "Could not buy that boost. Please try again.";
   }
   return haystack.trim() || "Could not buy that boost.";
 }
@@ -187,8 +214,16 @@ export async function loadExploreBoostedPosts(
     rows.map((row) => row.post_id)
   );
 
+  const minPublishedAt =
+    Date.now() - FRESH_PUSH_MAX_POST_AGE_HOURS * 3_600_000;
+
   return posts
     .filter((post) => !category || post.category === category)
+    .filter((post) => {
+      if (!post.created_at) return false;
+      const published = new Date(post.created_at).getTime();
+      return Number.isFinite(published) && published >= minPublishedAt;
+    })
     .map((post) => ({
       post,
       boostLabel: labelByPost.get(post.id) ?? "Boosted",
@@ -251,6 +286,40 @@ export async function loadHomeFeatureRail(
   items.push(...fallback.map((post) => ({ post, boostLabel: null })));
 
   return items;
+}
+
+export type CreatorProfile = {
+  name: string | null;
+  createdAt: string | null;
+};
+
+/** Names plus account age (for the new-maker ranking bonus), in one read. */
+export async function loadCreatorProfiles(
+  supabase: SupabaseClient,
+  creatorIds: (string | null)[]
+): Promise<Map<string, CreatorProfile>> {
+  const profiles = new Map<string, CreatorProfile>();
+  const ids = [...new Set(creatorIds.filter(Boolean))] as string[];
+  if (ids.length === 0) return profiles;
+
+  const { data, error } = await supabase
+    .from("public_profiles")
+    .select("id, username, created_at")
+    .in("id", ids);
+
+  if (error) {
+    console.error("Failed to load creator profiles:", error.message);
+    return profiles;
+  }
+
+  for (const profile of data ?? []) {
+    profiles.set(profile.id, {
+      name: profile.username?.trim() || null,
+      createdAt: (profile.created_at as string | null) ?? null,
+    });
+  }
+
+  return profiles;
 }
 
 export async function loadCreatorNames(

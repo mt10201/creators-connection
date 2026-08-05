@@ -15,7 +15,7 @@ alter table public.users
 drop view if exists public.public_profiles;
 create view public.public_profiles
 with (security_invoker = false) as
-select id, username, profile_photo
+select id, username, profile_photo, created_at
 from public.users;
 
 grant select on public.public_profiles to anon, authenticated;

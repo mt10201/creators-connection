@@ -78,10 +78,12 @@ create policy "Users can update own profile"
 -- Drop first: create or replace cannot remove columns from an existing view.
 -- security_invoker = false keeps the view running as its owner so it can
 -- expose every profile despite users RLS (select-own-only).
+-- created_at is exposed for the "new maker" ranking bonus; it is account age
+-- only, never email or credit balance.
 drop view if exists public.public_profiles;
 create view public.public_profiles
 with (security_invoker = false) as
-select id, username, profile_photo
+select id, username, profile_photo, created_at
 from public.users;
 
 grant select on public.public_profiles to anon, authenticated;

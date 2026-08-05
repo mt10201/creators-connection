@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import ImpressionTracker from "./ImpressionTracker";
 
 export type FeatureSlide = {
   id: string;
@@ -96,6 +97,16 @@ export default function FeatureCarousel({ slides }: { slides: FeatureSlide[] }) 
                 }`}
                 style={{ transitionDuration: `${FADE_MS}ms` }}
               >
+                {/* Only the slide on screen counts, and only as boosted when
+                    the slot was actually paid for. */}
+                {active && (
+                  <ImpressionTracker
+                    postId={slide.id}
+                    surface="home_banner"
+                    isBoosted={Boolean(slide.boostLabel)}
+                  />
+                )}
+
                 <div className="flex flex-wrap items-center gap-2">
                   {slide.boostLabel ? (
                     <span

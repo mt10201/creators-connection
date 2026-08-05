@@ -39,7 +39,7 @@ values
   (
     'fresh_push',
     'Fresh Push',
-    'Places your post in a labeled Just landed strip on Explore for 6 hours.',
+    'Places your post in a labeled Just landed strip on Explore for 6 hours. Available on posts under 24 hours old.',
     2, 6, 'explore_first_page', 'Boosted', true, 10
   ),
   (

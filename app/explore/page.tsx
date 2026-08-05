@@ -12,10 +12,11 @@ import OnboardingSteps, {
 import CategoryFilters from "@/app/components/CategoryFilters";
 import ExploreSearch from "@/app/components/ExploreSearch";
 import {
-  loadCreatorNames,
+  loadCreatorProfiles,
   loadExploreBoostedPosts,
   type BoostRailItem,
 } from "@/lib/boosts";
+import { rankPosts } from "@/lib/ranking";
 
 const exploreDescription =
   "Discover original work from independent creators — browse product posts for inspiration.";
@@ -46,9 +47,13 @@ type PostRow = {
   media_urls: string[] | null;
   video_url: string | null;
   creator_id: string | null;
+  created_at: string | null;
   like_count: number | null;
   save_count: number | null;
 };
+
+/** Candidate pool for scoring. Larger than one screen so ranking has room. */
+const CANDIDATE_LIMIT = 120;
 
 /** Escape `%` / `_` so user input is treated as a literal in ILIKE. */
 function escapeIlike(value: string) {
@@ -71,11 +76,11 @@ export default async function ExplorePage({
   let query = supabase
     .from("posts")
     .select(
-      "id, product_title, description, category, product_link, media_urls, video_url, creator_id, like_count, save_count"
+      "id, product_title, description, category, product_link, media_urls, video_url, creator_id, created_at, like_count, save_count"
     )
     .eq("status", "active")
     .order("created_at", { ascending: false })
-    .limit(60);
+    .limit(CANDIDATE_LIMIT);
 
   if (activeCategory !== "All") {
     query = query.eq("category", activeCategory);
@@ -114,7 +119,7 @@ export default async function ExplorePage({
   }
 
   const { data, error } = await query;
-  const posts = (data ?? []) as PostRow[];
+  const candidates = (data ?? []) as PostRow[];
 
   // The Just landed strip is its own section above the grid, so the organic
   // grid stays a single uninterrupted list with no reserved placeholders.
@@ -124,10 +129,30 @@ export default async function ExplorePage({
         category: activeCategory === "All" ? null : activeCategory,
       });
 
-  const creatorNames = await loadCreatorNames(supabase, [
-    ...posts.map((post) => post.creator_id),
+  const creatorProfiles = await loadCreatorProfiles(supabase, [
+    ...candidates.map((post) => post.creator_id),
     ...boostedItems.map((item) => item.post.creator_id),
   ]);
+
+  const creatorNames = new Map<string, string>();
+  const creatorCreatedAt = new Map<string, string>();
+  for (const [id, profile] of creatorProfiles) {
+    if (profile.name) creatorNames.set(id, profile.name);
+    if (profile.createdAt) creatorCreatedAt.set(id, profile.createdAt);
+  }
+
+  // Boosted posts live in the strip above, so they're dropped from the organic
+  // grid — one appearance each, no duplicates.
+  const boostedIds = new Set(boostedItems.map((item) => item.post.id));
+  const organicCandidates = candidates.filter(
+    (post) => !boostedIds.has(post.id)
+  );
+
+  // Search keeps recency ordering; the ranked feed is for browsing. Scoring
+  // never reads boost status, so buying a boost can't move a post here.
+  const posts = searchQuery
+    ? organicCandidates
+    : rankPosts(organicCandidates, creatorCreatedAt);
 
   const {
     data: { user },
@@ -239,6 +264,7 @@ export default async function ExplorePage({
                   liked={likedIds.has(post.id)}
                   saved={savedIds.has(post.id)}
                   boostLabel={boostLabel ?? "Boosted"}
+                  impressionSurface="just_landed"
                 />
               ))}
             </div>
@@ -335,6 +361,7 @@ export default async function ExplorePage({
                     liked={likedIds.has(post.id)}
                     saved={savedIds.has(post.id)}
                     priority={index < 4}
+                    impressionSurface="explore"
                   />
                 ))}
               </div>

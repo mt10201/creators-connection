@@ -3,7 +3,13 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { purchaseBoost } from "@/app/actions/boosts";
-import type { BoostProduct } from "@/lib/boosts";
+import {
+  FRESH_PUSH_SLUG,
+  FRESH_PUSH_TOO_OLD_REASON,
+  getBoostErrorMessage,
+  isFreshPushEligible,
+  type BoostProduct,
+} from "@/lib/boosts";
 import Spinner from "./Spinner";
 
 export type BoostPurchaseInfo = {
@@ -18,6 +24,8 @@ type Props = {
   products: BoostProduct[];
   /** Vested credits only — the RPC enforces the same number server-side. */
   spendable: number;
+  /** Post publish time — used to disable Fresh Push past the 24h window. */
+  postCreatedAt?: string | null;
   triggerLabel?: string;
   triggerClassName?: string;
   /** Called on success so the parent can keep a dismissible banner after refresh. */
@@ -30,17 +38,33 @@ function hoursLabel(hours: number) {
   return days === 1 ? "24 hours" : `${days} days`;
 }
 
+function productDisabledReason(
+  item: BoostProduct,
+  freshPushOk: boolean
+): string | null {
+  if (item.slug === FRESH_PUSH_SLUG && !freshPushOk) {
+    return FRESH_PUSH_TOO_OLD_REASON;
+  }
+  return null;
+}
+
 export default function BoostDialog({
   postId,
   products,
   spendable,
+  postCreatedAt = null,
   triggerLabel = "Boost this post",
   triggerClassName = "inline-flex min-h-11 items-center rounded-full border border-ochre/40 bg-ochre/10 px-4 text-sm font-medium text-ochre transition duration-200 hover:border-ochre hover:bg-ochre/20",
   onPurchased,
 }: Props) {
   const router = useRouter();
+  const freshPushOk = isFreshPushEligible(postCreatedAt);
+  const firstSelectable =
+    products.find((item) => !productDisabledReason(item, freshPushOk)) ??
+    products[0];
+
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState(products[0]?.slug ?? "");
+  const [selected, setSelected] = useState(firstSelectable?.slug ?? "");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -61,18 +85,33 @@ export default function BoostDialog({
     };
   }, [open, pending]);
 
+  // If Fresh Push becomes ineligible while selected, move the radio to the
+  // next available product so the user isn't stuck on a disabled option.
+  useEffect(() => {
+    const current = products.find((item) => item.slug === selected);
+    if (current && !productDisabledReason(current, freshPushOk)) return;
+    if (firstSelectable?.slug) setSelected(firstSelectable.slug);
+  }, [selected, products, freshPushOk, firstSelectable?.slug]);
+
   if (products.length === 0) return null;
 
   const product = products.find((item) => item.slug === selected) ?? products[0];
+  const selectedDisabledReason = productDisabledReason(product, freshPushOk);
   const canAfford = spendable >= product.cost_credits;
+  const canBuy = canAfford && !selectedDisabledReason;
 
   function confirm() {
+    if (selectedDisabledReason) {
+      setError(getBoostErrorMessage("BOOST_POST_TOO_OLD"));
+      return;
+    }
+
     setError(null);
     startTransition(async () => {
       const result = await purchaseBoost(postId, product.slug);
 
       if (!result.ok) {
-        setError(result.error);
+        setError(getBoostErrorMessage(result.error));
         return;
       }
 
@@ -143,13 +182,18 @@ export default function BoostDialog({
               <legend className="sr-only">Choose a boost</legend>
               {products.map((item) => {
                 const affordable = spendable >= item.cost_credits;
+                const disabledReason = productDisabledReason(item, freshPushOk);
+                const disabled = Boolean(disabledReason) || pending;
+
                 return (
                   <label
                     key={item.slug}
-                    className={`flex cursor-pointer gap-3 rounded-2xl border p-4 transition duration-200 ${
-                      selected === item.slug
-                        ? "border-ochre bg-ochre/10"
-                        : "border-sand bg-parchment/50 hover:border-ochre/50"
+                    className={`flex gap-3 rounded-2xl border p-4 transition duration-200 ${
+                      disabled
+                        ? "cursor-not-allowed border-sand bg-parchment/30 opacity-70"
+                        : selected === item.slug
+                          ? "cursor-pointer border-ochre bg-ochre/10"
+                          : "cursor-pointer border-sand bg-parchment/50 hover:border-ochre/50"
                     }`}
                   >
                     <input
@@ -157,8 +201,10 @@ export default function BoostDialog({
                       name="boost-product"
                       value={item.slug}
                       checked={selected === item.slug}
-                      onChange={() => setSelected(item.slug)}
-                      disabled={pending}
+                      onChange={() => {
+                        if (!disabledReason) setSelected(item.slug);
+                      }}
+                      disabled={disabled}
                       className="mt-1 h-4 w-4 accent-ochre"
                     />
                     <span className="min-w-0 flex-1">
@@ -177,7 +223,11 @@ export default function BoostDialog({
                       <span className="mt-1 block text-xs text-ink-faint">
                         Runs for {hoursLabel(item.duration_hours)} · labeled “
                         {item.label}”
-                        {!affordable && " · not enough credits yet"}
+                        {disabledReason
+                          ? ` · ${disabledReason}`
+                          : !affordable
+                            ? " · not enough credits yet"
+                            : ""}
                       </span>
                     </span>
                   </label>
@@ -203,7 +253,7 @@ export default function BoostDialog({
               <button
                 type="button"
                 onClick={confirm}
-                disabled={pending || !canAfford}
+                disabled={pending || !canBuy}
                 className="btn-primary disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {pending && <Spinner />}
