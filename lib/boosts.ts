@@ -52,7 +52,7 @@ export const FRESH_PUSH_TOO_OLD_REASON =
   "Only for posts under 24 hours old";
 
 export const FRESH_PUSH_TOO_OLD_MESSAGE =
-  "Fresh Push is only available on posts less than 24 hours old. Try Home Feature, or boost a newer post.";
+  "Fresh Push is only available on posts less than 24 hours old. Use Home Feature for older posts, or boost a newer listing.";
 
 const BOOST_ERRORS: Record<string, string> = {
   BOOST_NOT_AUTHENTICATED: "Please log in again to boost this post.",

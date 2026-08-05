@@ -61,6 +61,7 @@ export const metadata: Metadata = {
 const footerLinks = [
   { href: "/explore", label: "Explore" },
   { href: "/how-it-works", label: "How It Works" },
+  { href: "/how-explore-ranks", label: "How Explore Ranks" },
   { href: "/#about", label: "About" },
   { href: "/privacy", label: "Privacy" },
   { href: "/contact", label: "Contact" },

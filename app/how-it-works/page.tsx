@@ -149,6 +149,17 @@ export default async function HowItWorksPage() {
                 here is intentional — no endless scrolling, just focused
                 inspiration.
               </p>
+              <p className="mt-4 text-[0.95rem] leading-[1.85] text-ink-muted">
+                Curious how the feed is ordered?{" "}
+                <Link
+                  href="/how-explore-ranks"
+                  className="text-terracotta underline-offset-4 hover:underline"
+                >
+                  How Explore ranks
+                </Link>{" "}
+                explains freshness, engagement, diversity, and what boosts can
+                and can&apos;t change — in plain language.
+              </p>
             </div>
           </article>
 
@@ -243,7 +254,14 @@ export default async function HowItWorksPage() {
                   strip on Explore and the homepage banner. The Explore feed
                   itself is ranked on engagement, recency, and a small new-maker
                   bonus, with no boost input at all, and when nobody has
-                  boosted, the Just landed strip simply doesn’t appear.
+                  boosted, the Just landed strip simply doesn’t appear.{" "}
+                  <Link
+                    href="/how-explore-ranks"
+                    className="text-terracotta underline-offset-4 hover:underline"
+                  >
+                    Read how Explore ranks
+                  </Link>
+                  .
                 </p>
               </div>
             </div>
