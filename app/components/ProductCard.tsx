@@ -82,10 +82,11 @@ export default function ProductCard({
           )}
         </div>
 
-        <h2 className="mt-2 font-display text-lg font-semibold leading-snug tracking-tight">
+        <h2 className="mt-2 min-w-0 font-display text-lg font-semibold leading-snug tracking-tight">
           <Link
             href={`/products/${post.id}`}
-            className="transition duration-200 group-hover:text-terracotta"
+            className="block truncate transition duration-200 group-hover:text-terracotta"
+            title={post.product_title ?? undefined}
           >
             {post.product_title ?? "Untitled product"}
           </Link>
@@ -105,11 +106,16 @@ export default function ProductCard({
             </p>
           ))}
 
-        <p className="mt-3 line-clamp-2 flex-1 text-sm leading-relaxed text-ink-muted">
-          {post.description}
-        </p>
+        {post.description && (
+          <p
+            className="mt-3 line-clamp-3 min-w-0 break-words text-sm leading-relaxed text-ink-muted"
+            title={post.description}
+          >
+            {post.description}
+          </p>
+        )}
 
-        <div className="rule-double mt-5 flex items-center justify-between gap-3 pt-3">
+        <div className="rule-double mt-auto flex items-center justify-between gap-3 pt-5">
           <PostActions
             postId={post.id}
             isLoggedIn={isLoggedIn}
