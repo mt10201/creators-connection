@@ -1,15 +1,23 @@
 import type { WalletTransaction } from "@/lib/wallet";
 
+type Props = {
+  transactions: WalletTransaction[];
+  /** Rendered as its own card on the dashboard, inline inside Settings. */
+  bare?: boolean;
+  className?: string;
+};
+
 export default function CreditActivity({
   transactions,
-}: {
-  transactions: WalletTransaction[];
-}) {
+  bare = false,
+  className = "",
+}: Props) {
+  const wrapperClass = bare
+    ? className
+    : `mt-6 rounded-[1.5rem] border border-sand bg-parchment/60 px-6 py-5 shadow-soft sm:px-7 ${className}`;
+
   return (
-    <section
-      aria-label="Recent credit activity"
-      className="mt-6 rounded-[1.5rem] border border-sand bg-parchment/60 px-6 py-5 shadow-soft sm:px-7"
-    >
+    <section aria-label="Recent credit activity" className={wrapperClass}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <span className="eyebrow text-sage">Recent credit activity</span>
         {transactions.length > 0 && (

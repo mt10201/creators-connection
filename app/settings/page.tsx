@@ -6,7 +6,7 @@ import SettingsForms from "./SettingsForms";
 
 export const metadata: Metadata = {
   title: "Account Settings",
-  description: "Update your username and password.",
+  description: "Manage your profile, security, and credits.",
 };
 
 export default async function SettingsPage() {
@@ -54,7 +54,7 @@ export default async function SettingsPage() {
   // The wallet reads the ledger, so this shows spendable rather than the
   // lifetime credit_balance column.
   const wallet = await loadWallet(supabase, profile?.credit_balance ?? 0, {
-    limit: 1,
+    limit: 10,
   });
   const photoUrl = profile?.profile_photo?.trim() || null;
   const profileHref = username
@@ -70,7 +70,7 @@ export default async function SettingsPage() {
             Settings
           </h1>
           <p className="mt-2 max-w-md text-sm leading-relaxed text-ink-muted">
-            Update your public details and sign-in password, or permanently
+            Manage your profile, sign-in details, and credits — or permanently
             delete your account.
           </p>
         </div>
@@ -82,9 +82,7 @@ export default async function SettingsPage() {
             initialUsername={username}
             initialPhotoUrl={photoUrl}
             email={email}
-            credits={wallet.spendable}
-            vestingCredits={wallet.vesting}
-            nextVestingAt={wallet.nextVestingAt}
+            wallet={wallet}
             profileHref={profileHref}
           />
         </div>

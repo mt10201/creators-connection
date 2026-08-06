@@ -22,7 +22,6 @@ import DashboardTabs, {
   type DashboardView,
 } from "./DashboardTabs";
 import BoostManager from "./BoostManager";
-import CreditActivity from "./CreditActivity";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -150,7 +149,7 @@ export default async function DashboardPage({
       : new Map();
 
   const [wallet, myBoosts] = await Promise.all([
-    loadWallet(supabase, credits, { limit: 15 }),
+    loadWallet(supabase, credits, { limit: 0 }),
     loadMyActiveBoosts(supabase, user.id),
   ]);
 
@@ -257,8 +256,6 @@ export default async function DashboardPage({
           </ul>
 
           <BoostManager boosts={myBoosts} />
-
-          <CreditActivity transactions={wallet.transactions} />
         </div>
       </section>
 

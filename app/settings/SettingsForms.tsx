@@ -21,17 +21,23 @@ import { validateNewPassword } from "@/lib/password";
 import { validateProfilePhoto } from "@/lib/profile-photo";
 import Avatar from "@/app/components/Avatar";
 import Spinner from "@/app/components/Spinner";
+import CreditActivity from "@/app/components/CreditActivity";
+import type { Wallet } from "@/lib/wallet";
 
-type Tab = "profile" | "password";
+type Tab = "profile" | "security" | "credits" | "danger";
+
+const tabs: { id: Tab; label: string }[] = [
+  { id: "profile", label: "Profile" },
+  { id: "security", label: "Security" },
+  { id: "credits", label: "Credits" },
+  { id: "danger", label: "Danger zone" },
+];
 
 type Props = {
   initialUsername: string;
   initialPhotoUrl: string | null;
   email: string;
-  /** Spendable (vested) credits. */
-  credits: number;
-  vestingCredits?: number;
-  nextVestingAt?: string | null;
+  wallet: Wallet;
   profileHref: string | null;
 };
 
@@ -39,89 +45,33 @@ export default function SettingsForms({
   initialUsername,
   initialPhotoUrl,
   email,
-  credits,
-  vestingCredits = 0,
-  nextVestingAt = null,
+  wallet,
   profileHref,
 }: Props) {
   const [tab, setTab] = useState<Tab>("profile");
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-2xl border border-sand bg-cream shadow-soft">
-        {/* Always-visible photo controls — not buried behind a tab. */}
-        <PhotoSection
-          initialUsername={initialUsername}
-          initialPhotoUrl={initialPhotoUrl}
-        />
-
-        <div className="grid gap-4 border-b border-sand px-5 py-4 sm:grid-cols-[1fr_auto] sm:items-center sm:px-6">
-          <dl className="grid gap-3 sm:grid-cols-2 sm:gap-6">
-            <div>
-              <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-faint">
-                Email
-              </dt>
-              <dd className="mt-1 truncate text-sm text-ink">{email}</dd>
-              <dd className="mt-0.5 text-xs text-ink-muted">
-                Can’t be changed here yet.
-              </dd>
-            </div>
-            <div>
-              <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-faint">
-                Credits
-              </dt>
-            <dd className="mt-1 font-display text-xl font-semibold tracking-tight text-ink">
-              {credits}
-              <span className="ml-1.5 text-sm font-medium text-ink-muted">
-                spendable {credits === 1 ? "credit" : "credits"}
-              </span>
-            </dd>
-            <dd className="mt-0.5 text-xs text-ink-muted">
-              {vestingCredits > 0
-                ? `${vestingCredits} more vesting${
-                    nextVestingAt ? ` — next unlocks ${nextVestingAt}` : ""
-                  }.`
-                : "Credits become spendable 24 hours after you earn them."}{" "}
-              <Link
-                href="/dashboard"
-                className="text-terracotta underline-offset-4 hover:underline"
-              >
-                See activity
-              </Link>
-            </dd>
-          </div>
-          </dl>
-          {profileHref && (
-            <Link
-              href={profileHref}
-              className="shrink-0 text-sm text-terracotta underline-offset-4 transition hover:underline"
-            >
-              Public profile →
-            </Link>
-          )}
-        </div>
-
-        <div className="px-5 py-4 sm:px-6">
-          <div
-            role="tablist"
-            aria-label="Settings sections"
-            className="inline-flex gap-1 rounded-full border border-sand bg-parchment/70 p-1"
-          >
-            {(
-              [
-                { id: "profile", label: "Username" },
-                { id: "password", label: "Password" },
-              ] as const
-            ).map((item) => {
+    <div className="rounded-2xl border border-sand bg-cream shadow-soft">
+      <div className="border-b border-sand px-5 py-4 sm:px-6">
+        <div
+          role="tablist"
+          aria-label="Settings sections"
+          // Scrolls rather than wrapping on narrow screens.
+          className="-mx-1 overflow-x-auto px-1 py-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          <div className="inline-flex gap-1 rounded-full border border-sand bg-parchment/70 p-1">
+            {tabs.map((item) => {
               const active = tab === item.id;
               return (
                 <button
                   key={item.id}
                   type="button"
                   role="tab"
+                  id={`settings-tab-${item.id}`}
                   aria-selected={active}
+                  aria-controls={`settings-panel-${item.id}`}
                   onClick={() => setTab(item.id)}
-                  className={`chip border-transparent ${
+                  className={`chip whitespace-nowrap border-transparent ${
                     active
                       ? "bg-terracotta font-medium text-cream shadow-soft"
                       : "text-ink-muted hover:bg-cream hover:text-terracotta"
@@ -132,18 +82,107 @@ export default function SettingsForms({
               );
             })}
           </div>
-
-          <div className="mt-5" role="tabpanel">
-            {tab === "profile" ? (
-              <UsernameForm initialUsername={initialUsername} />
-            ) : (
-              <PasswordForm />
-            )}
-          </div>
         </div>
       </div>
 
-      <DeleteAccountSection username={initialUsername} />
+      <div
+        role="tabpanel"
+        id={`settings-panel-${tab}`}
+        aria-labelledby={`settings-tab-${tab}`}
+      >
+        {tab === "profile" && (
+          <>
+            <PhotoSection
+              initialUsername={initialUsername}
+              initialPhotoUrl={initialPhotoUrl}
+            />
+            <div className="px-5 py-5 sm:px-6">
+              <UsernameForm initialUsername={initialUsername} />
+              {profileHref && (
+                <Link
+                  href={profileHref}
+                  className="mt-5 inline-block text-sm text-terracotta underline-offset-4 transition hover:underline"
+                >
+                  View public profile →
+                </Link>
+              )}
+            </div>
+          </>
+        )}
+
+        {tab === "security" && (
+          <div className="space-y-6 px-5 py-5 sm:px-6">
+            <div>
+              <p className="form-label">Email</p>
+              <p className="mt-1 truncate text-sm text-ink">{email}</p>
+              <p className="form-hint">
+                Used to sign in. Changing it isn’t supported yet.
+              </p>
+            </div>
+
+            <div className="border-t border-sand pt-6">
+              <p className="form-label">Password</p>
+              <div className="mt-3">
+                <PasswordForm />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab === "credits" && (
+          <CreditsPanel wallet={wallet} />
+        )}
+
+        {tab === "danger" && (
+          <div className="px-5 py-5 sm:px-6">
+            <DeleteAccountSection username={initialUsername} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CreditsPanel({ wallet }: { wallet: Wallet }) {
+  const { spendable, vesting, nextVestingAt, transactions } = wallet;
+
+  return (
+    <div className="px-5 py-5 sm:px-6">
+      <div className="rounded-[1.25rem] border border-ochre/25 bg-ochre/5 px-5 py-4">
+        <span className="eyebrow text-ochre">Credit balance</span>
+        <p className="mt-2 font-display text-3xl font-semibold tracking-tight text-ink">
+          {spendable}
+          <span className="ml-2 text-base font-medium text-ink-muted">
+            spendable {spendable === 1 ? "credit" : "credits"}
+          </span>
+        </p>
+        <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">
+          {vesting > 0
+            ? `${vesting} more ${vesting === 1 ? "credit" : "credits"} vesting${
+                nextVestingAt ? ` — next unlocks ${nextVestingAt}` : ""
+              }.`
+            : "Credits become spendable 24 hours after you earn them."}
+        </p>
+      </div>
+
+      <div className="mt-6 border-t border-sand pt-5">
+        <CreditActivity transactions={transactions} bare />
+      </div>
+
+      <div className="mt-5 flex flex-wrap gap-4 text-sm">
+        <Link
+          href="/dashboard"
+          className="text-terracotta underline-offset-4 hover:underline"
+        >
+          Full activity on your dashboard →
+        </Link>
+        <Link
+          href="/how-it-works#credits"
+          className="text-ink-muted underline-offset-4 hover:text-terracotta hover:underline"
+        >
+          How credits work
+        </Link>
+      </div>
     </div>
   );
 }
@@ -510,21 +549,23 @@ function DeleteAccountSection({ username }: { username: string }) {
   }
 
   return (
-    <div className="mt-14 border-t border-sand/80 pt-8">
+    <div>
+      <p className="form-label">Delete account</p>
+      <p className="form-hint">
+        Permanently removes your account, posts, and credits. This can’t be
+        undone.
+      </p>
+
       {!open ? (
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="text-xs text-ink-faint underline-offset-4 transition duration-200 hover:text-ink-muted hover:underline"
+          className="mt-4 text-xs text-ink-faint underline-offset-4 transition duration-200 hover:text-ink-muted hover:underline"
         >
           Delete account
         </button>
       ) : (
-        <form className="max-w-sm space-y-3" onSubmit={onSubmit}>
-          <p className="text-xs leading-relaxed text-ink-faint">
-            Permanently delete your account and all associated data. This can’t
-            be undone.
-          </p>
+        <form className="mt-4 max-w-sm space-y-3" onSubmit={onSubmit}>
           <div>
             <label
               htmlFor="delete-account-confirm"
