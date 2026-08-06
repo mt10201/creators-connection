@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { trackEvent, type AnalyticsEventName } from "@/lib/analytics";
 import { createClient } from "@/lib/supabase/server";
 
@@ -59,10 +58,14 @@ async function toggle(
     .eq("id", postId)
     .maybeSingle();
 
-  revalidatePath("/explore");
-  revalidatePath(`/products/${postId}`);
-  // The dashboard hosts the liked and saved collections.
-  revalidatePath("/dashboard");
+  // Deliberately no revalidatePath. Revalidating in a Server Action clears the
+  // client Router Cache and re-renders the current route, which on Explore
+  // means running the ranking query again and shuffling cards under the cursor
+  // the moment someone likes something. The caller gets the fresh count in the
+  // return value and patches that one card in place instead.
+  //
+  // Nothing goes stale as a result: every route here is dynamic, so navigating
+  // to Explore or the dashboard re-queries and re-ranks on arrival.
 
   const count =
     (post as Record<string, number | null> | null)?.[countColumn] ?? 0;

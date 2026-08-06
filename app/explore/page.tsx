@@ -11,6 +11,7 @@ import OnboardingSteps, {
 } from "@/app/components/OnboardingSteps";
 import CategoryFilters from "@/app/components/CategoryFilters";
 import ExploreSearch from "@/app/components/ExploreSearch";
+import StableOrder from "@/app/components/StableOrder";
 import {
   loadCreatorProfiles,
   loadExploreBoostedPosts,
@@ -190,6 +191,10 @@ export default async function ExplorePage({
       ? "/explore"
       : `/explore?category=${encodeURIComponent(activeCategory)}`;
 
+  // Identifies the current view. Changing category or search remounts the grid
+  // and adopts the new order; a like or save leaves it untouched.
+  const viewKey = `${activeCategory}::${searchQuery}`;
+
   return (
     <div>
       <section className="px-5 pb-8 pt-14 sm:px-8 sm:pt-16">
@@ -349,7 +354,13 @@ export default async function ExplorePage({
             )
           ) : (
             <div className="animate-fade-in">
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-7 xl:grid-cols-4">
+              {/* The ranking runs per request, so the rendered order is frozen
+                  for this view. Remounting on a new category or query is what
+                  lets a fresh ranking take effect. */}
+              <StableOrder
+                key={viewKey}
+                className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-7 xl:grid-cols-4"
+              >
                 {posts.map((post, index) => (
                   <ProductCard
                     key={post.id}
@@ -364,7 +375,7 @@ export default async function ExplorePage({
                     impressionSurface="explore"
                   />
                 ))}
-              </div>
+              </StableOrder>
             </div>
           )}
         </div>
