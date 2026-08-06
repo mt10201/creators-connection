@@ -3,11 +3,13 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { loadWallet } from "@/lib/wallet";
 import { loadReferralSummary, referralToken } from "@/lib/referrals";
+import { PRIVATE_PAGE_ROBOTS } from "@/lib/seo";
 import SettingsForms from "./SettingsForms";
 
 export const metadata: Metadata = {
   title: "Account Settings",
   description: "Manage your profile, security, and credits.",
+  robots: PRIVATE_PAGE_ROBOTS,
 };
 
 export default async function SettingsPage() {

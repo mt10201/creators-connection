@@ -67,7 +67,7 @@ export default function FeatureCarousel({ slides }: { slides: FeatureSlide[] }) 
                 {slide.image ? (
                   <Image
                     src={slide.image}
-                    alt=""
+                    alt={slide.title ? `Photo of ${slide.title}` : "Featured work"}
                     fill
                     sizes="(min-width: 640px) 45vw, 100vw"
                     className="object-cover"

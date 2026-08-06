@@ -15,6 +15,8 @@ import OwnerBoostPanel from "@/app/components/OwnerBoostPanel";
 import DeletePostButton from "@/app/components/DeletePostButton";
 import ImpressionTracker from "@/app/components/ImpressionTracker";
 import OutboundProductLink from "@/app/components/OutboundProductLink";
+import JsonLd from "@/app/components/JsonLd";
+import { breadcrumbJsonLd, productJsonLd } from "@/lib/seo";
 import ProductGallery from "./ProductGallery";
 
 type Props = { params: Promise<{ id: string }> };
@@ -116,9 +118,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const title = result.post.product_title?.trim() || "Product";
   const rawDescription = result.post.description?.trim();
+  const creator = result.creatorName?.trim();
   const description = rawDescription
     ? truncateMeta(rawDescription)
-    : `Discover ${title} on Creators Connection.`;
+    : `${title}${creator ? ` by ${creator}` : ""} — shared on ${SITE_NAME} by an independent maker.`;
   const image = ((result.post.media_urls ?? []) as unknown[])
     .find((url): url is string => typeof url === "string" && url.trim().length > 0);
   const path = `/products/${id}`;
@@ -130,11 +133,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description,
     alternates: { canonical: path },
     openGraph: {
-      type: "website",
+      type: "article",
       title: shareTitle,
       description,
       url: path,
-      images: image ? [{ url: image }] : undefined,
+      publishedTime: result.post.created_at ?? undefined,
+      authors: creator ? [creator] : undefined,
+      images: image ? [{ url: image, alt: title }] : undefined,
     },
     twitter: {
       card: image ? "summary_large_image" : "summary",
@@ -173,12 +178,48 @@ export default async function ProductPage({ params }: Props) {
       })
     : null;
 
+  const creatorPath = creatorName
+    ? `/profile/${encodeURIComponent(creatorName)}`
+    : null;
+  const metaTitle = post.product_title?.trim() || "Product";
+
   return (
     <div
       className={`px-5 py-10 sm:px-8 sm:py-12 ${
         post.product_link ? "pb-28 lg:pb-12" : ""
       }`}
     >
+      <JsonLd
+        data={[
+          productJsonLd({
+            path: `/products/${post.id}`,
+            title: metaTitle,
+            description:
+              post.description?.trim() ||
+              `${metaTitle} shared on ${SITE_NAME}.`,
+            images,
+            creatorName,
+            creatorPath,
+            category: post.category ?? null,
+            createdAt: post.created_at ?? null,
+            externalUrl: post.product_link ?? null,
+          }),
+          breadcrumbJsonLd([
+            { name: "Home", path: "/" },
+            { name: "Explore", path: "/explore" },
+            ...(post.category
+              ? [
+                  {
+                    name: post.category,
+                    path: `/explore?category=${encodeURIComponent(post.category)}`,
+                  },
+                ]
+              : []),
+            { name: metaTitle, path: `/products/${post.id}` },
+          ]),
+        ]}
+      />
+
       <div className="mx-auto max-w-5xl">
         <Link
           href="/explore"

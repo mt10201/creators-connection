@@ -5,11 +5,13 @@ import { createClient } from "@/lib/supabase/server";
 import { formatRelativeTime, loadNotifications } from "@/lib/notifications";
 import Avatar from "@/app/components/Avatar";
 import EmptyState from "@/app/components/EmptyState";
+import { PRIVATE_PAGE_ROBOTS } from "@/lib/seo";
 import MarkNotificationsRead from "./MarkNotificationsRead";
 
 export const metadata: Metadata = {
   title: "Notifications",
   description: "Likes and saves on the work you've shared.",
+  robots: PRIVATE_PAGE_ROBOTS,
 };
 
 export default async function NotificationsPage() {

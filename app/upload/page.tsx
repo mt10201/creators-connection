@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { PRIVATE_PAGE_ROBOTS } from "@/lib/seo";
 import UploadForm from "./UploadForm";
 
 export const metadata: Metadata = {
   title: "Upload Product",
   description: "Share your work with the Creators Connection community.",
+  robots: PRIVATE_PAGE_ROBOTS,
 };
 
 export default async function UploadPage() {

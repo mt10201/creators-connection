@@ -9,6 +9,8 @@ import {
   SITE_TITLE,
 } from "@/lib/site";
 import HomeFeatureBanner from "@/app/components/HomeFeatureBanner";
+import JsonLd from "@/app/components/JsonLd";
+import { organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 
 const ogImageUrl = getDefaultOgImageUrl();
 const siteUrl = getSiteUrl().toString();
@@ -83,6 +85,8 @@ const browserBenefits = [
 export default function HomePage() {
   return (
     <div>
+      <JsonLd data={[websiteJsonLd(), organizationJsonLd()]} />
+
       {/* Hero */}
       <section className="px-5 pb-16 pt-14 sm:px-8 sm:pb-24 sm:pt-28">
         <div className="mx-auto max-w-4xl text-center">

@@ -22,22 +22,67 @@ import { rankPosts } from "@/lib/ranking";
 const exploreDescription =
   "Discover original work from independent creators — browse product posts for inspiration.";
 
-export const metadata: Metadata = {
-  title: "Explore",
-  description: exploreDescription,
-  openGraph: {
-    title: `Explore | ${SITE_NAME}`,
-    description: exploreDescription,
-    url: "/explore",
-  },
-  alternates: {
-    canonical: "/explore",
-  },
-};
-
 const categories = ["All", ...productCategories] as const;
 
 type Category = (typeof categories)[number];
+
+function resolveCategory(raw: string | undefined): Category {
+  return categories.includes(raw as Category) ? (raw as Category) : "All";
+}
+
+/**
+ * Category views are real shareable URLs, so each gets its own title, its own
+ * description and a self-referencing canonical. Search result pages are the one
+ * exception: they're noindexed and canonicalised to the unfiltered feed, since
+ * an unbounded set of `?q=` permutations is thin, duplicative crawl bait.
+ */
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string; q?: string }>;
+}): Promise<Metadata> {
+  const { category: rawCategory, q: rawQuery } = await searchParams;
+  const activeCategory = resolveCategory(rawCategory);
+  const searchQuery = (rawQuery ?? "").trim().slice(0, 120);
+
+  if (searchQuery) {
+    return {
+      title: `Search: ${searchQuery}`,
+      description: `Products and makers matching “${searchQuery}” on ${SITE_NAME}.`,
+      robots: { index: false, follow: true },
+      alternates: { canonical: "/explore" },
+    };
+  }
+
+  if (activeCategory === "All") {
+    return {
+      title: "Explore",
+      description: exploreDescription,
+      alternates: { canonical: "/explore" },
+      openGraph: {
+        title: `Explore | ${SITE_NAME}`,
+        description: exploreDescription,
+        url: "/explore",
+      },
+    };
+  }
+
+  const lower = activeCategory.toLowerCase();
+  const title = `${activeCategory}`;
+  const description = `Browse ${lower} from independent makers on ${SITE_NAME} — original work shared for inspiration and discovery.`;
+  const path = `/explore?category=${encodeURIComponent(activeCategory)}`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: path },
+    openGraph: {
+      title: `${activeCategory} | ${SITE_NAME}`,
+      description,
+      url: path,
+    },
+  };
+}
 
 type PostRow = {
   id: string;
@@ -67,9 +112,7 @@ export default async function ExplorePage({
   searchParams: Promise<{ category?: string; q?: string }>;
 }) {
   const { category: rawCategory, q: rawQuery } = await searchParams;
-  const activeCategory: Category = categories.includes(rawCategory as Category)
-    ? (rawCategory as Category)
-    : "All";
+  const activeCategory = resolveCategory(rawCategory);
   const searchQuery = (rawQuery ?? "").trim().slice(0, 120);
 
   const supabase = await createClient();
@@ -199,12 +242,18 @@ export default async function ExplorePage({
     <div>
       <section className="px-5 pb-8 pt-14 sm:px-8 sm:pt-16">
         <div className="mx-auto max-w-7xl">
-          <span className="eyebrow text-sage">The feed</span>
+          {/* The h1 names what's actually on the page, so a category URL isn't
+              a near-duplicate of the unfiltered feed. */}
+          <span className="eyebrow text-sage">
+            {activeCategory === "All" ? "The feed" : "Explore"}
+          </span>
           <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight sm:text-5xl">
-            Explore
+            {activeCategory === "All" ? "Explore" : activeCategory}
           </h1>
           <p className="mt-3 max-w-md text-base leading-relaxed text-ink-muted">
-            Discover original work from independent creators.
+            {activeCategory === "All"
+              ? "Discover original work from independent creators."
+              : `Original ${activeCategory.toLowerCase()} from independent makers.`}
           </p>
 
           <ExploreSearch

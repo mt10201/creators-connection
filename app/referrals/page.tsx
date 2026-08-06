@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { loadReferralSummary, referralToken } from "@/lib/referrals";
+import { PRIVATE_PAGE_ROBOTS } from "@/lib/seo";
 import ReferralInvite from "@/app/components/ReferralInvite";
 
 export const metadata: Metadata = {
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
   description:
     "Invite makers to Creators Connection and earn credits when they publish their first product.",
   // Signed-in only, so keep it out of search results.
-  robots: { index: false, follow: false },
+  robots: PRIVATE_PAGE_ROBOTS,
 };
 
 export default async function ReferralsPage() {

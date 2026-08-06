@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { productCategories, type ProductCategory } from "@/lib/categories";
 import { sanitizeTags } from "@/lib/tags";
+import { PRIVATE_PAGE_ROBOTS } from "@/lib/seo";
 import EditForm, { type EditablePost } from "./EditForm";
 
 type Props = { params: Promise<{ id: string }> };
@@ -12,6 +13,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: "Edit Product",
     description: `Edit your product post ${id}.`,
+    robots: PRIVATE_PAGE_ROBOTS,
   };
 }
 

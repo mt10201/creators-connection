@@ -17,6 +17,7 @@ import OnboardingSteps, {
   firstPostSteps,
   firstSaveSteps,
 } from "@/app/components/OnboardingSteps";
+import { PRIVATE_PAGE_ROBOTS } from "@/lib/seo";
 import DashboardTabs, {
   parseDashboardView,
   type DashboardView,
@@ -27,6 +28,7 @@ export const metadata: Metadata = {
   title: "Dashboard",
   description:
     "Your credits, posts, likes, and saved products at a glance.",
+  robots: PRIVATE_PAGE_ROBOTS,
 };
 
 type OwnPost = ProductCardPost & {

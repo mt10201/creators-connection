@@ -8,6 +8,8 @@ import ProductCard, {
 } from "@/app/components/ProductCard";
 import Avatar from "@/app/components/Avatar";
 import EmptyState from "@/app/components/EmptyState";
+import JsonLd from "@/app/components/JsonLd";
+import { profileJsonLd } from "@/lib/seo";
 import OnboardingSteps, {
   firstPostSteps,
 } from "@/app/components/OnboardingSteps";
@@ -110,13 +112,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!result) return { title: "Creator not found" };
 
   const username = result.profile.username?.trim() || "Creator";
-  const description = `Products shared by ${username} on Creators Connection.`;
+  const count = result.posts.length;
+  const description =
+    count > 0
+      ? `${username} is an independent maker on ${SITE_NAME}, sharing ${count} ${
+          count === 1 ? "product" : "products"
+        } for inspiration and discovery.`
+      : `${username} is an independent maker on ${SITE_NAME}.`;
   const shareTitle = `${username} | ${SITE_NAME}`;
   const path = `/profile/${encodeURIComponent(username)}`;
   const photo = result.profile.profile_photo;
 
   return {
-    title: username,
+    title: `${username} — maker on ${SITE_NAME}`,
     description,
     alternates: { canonical: path },
     openGraph: {
@@ -125,9 +133,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       url: path,
       username,
-      images: photo ? [{ url: photo }] : undefined,
+      images: photo ? [{ url: photo, alt: username }] : undefined,
     },
     twitter: {
+      // A profile photo is square, so the small card suits it. Without one we
+      // fall through to the site default image from the root layout.
       card: photo ? "summary" : "summary_large_image",
       title: shareTitle,
       description,
@@ -173,8 +183,19 @@ export default async function ProfilePage({ params }: Props) {
     for (const row of saves ?? []) savedIds.add(row.post_id);
   }
 
+  const profileName = profile.username?.trim() || "Creator";
+
   return (
     <div>
+      <JsonLd
+        data={profileJsonLd({
+          path: `/profile/${encodeURIComponent(profileName)}`,
+          username: profileName,
+          photoUrl: profile.profile_photo ?? null,
+          postCount: posts.length,
+        })}
+      />
+
       {/* Profile header */}
       <section className="px-5 pb-8 pt-14 sm:px-8 sm:pt-16">
         <div className="mx-auto max-w-7xl">

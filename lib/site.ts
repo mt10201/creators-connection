@@ -11,17 +11,41 @@ export const SITE_DESCRIPTION =
 export const CONTACT_EMAIL = "tim@creators-connection.com";
 
 /**
+ * Where the site really lives. Used when nothing else identifies the origin, so
+ * a production deploy can never publish canonicals pointing at a per-deployment
+ * vercel.app hostname (which would split ranking signals across domains).
+ */
+export const PRODUCTION_SITE_URL = "https://www.creators-connection.com";
+
+/**
  * Absolute origin used by metadataBase so relative OG/canonical URLs resolve.
- * Prefer NEXT_PUBLIC_SITE_URL in production (e.g. https://www.creators-connection.com).
+ * Set NEXT_PUBLIC_SITE_URL to override; everything else is a fallback.
  */
 export function getSiteUrl(): URL {
   const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (explicit) return new URL(explicit);
+  if (explicit) {
+    try {
+      return new URL(explicit);
+    } catch {
+      // Malformed env var shouldn't break every page's metadata.
+    }
+  }
+
+  // Production deploys canonicalise to the real domain. Previews keep their own
+  // hostname so a preview never claims to be the live site.
+  if (process.env.VERCEL_ENV === "production") {
+    return new URL(PRODUCTION_SITE_URL);
+  }
 
   const vercel = process.env.VERCEL_URL?.trim();
   if (vercel) return new URL(`https://${vercel}`);
 
   return new URL("http://localhost:3000");
+}
+
+/** Absolute URL for a root-relative path, for sitemaps and JSON-LD. */
+export function absoluteUrl(path: string): string {
+  return new URL(path, getSiteUrl()).toString();
 }
 
 /** Absolute URL for the static default Open Graph / Twitter share image. */
