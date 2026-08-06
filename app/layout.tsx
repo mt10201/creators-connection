@@ -62,6 +62,7 @@ const footerLinks = [
   { href: "/explore", label: "Explore" },
   { href: "/how-it-works", label: "How It Works" },
   { href: "/how-explore-ranks", label: "How Explore Ranks" },
+  { href: "/referrals", label: "Referrals" },
   { href: "/#about", label: "About" },
   { href: "/privacy", label: "Privacy" },
   { href: "/contact", label: "Contact" },

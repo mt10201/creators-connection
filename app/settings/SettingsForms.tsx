@@ -22,14 +22,17 @@ import { validateProfilePhoto } from "@/lib/profile-photo";
 import Avatar from "@/app/components/Avatar";
 import Spinner from "@/app/components/Spinner";
 import CreditActivity from "@/app/components/CreditActivity";
+import ReferralInvite from "@/app/components/ReferralInvite";
 import type { Wallet } from "@/lib/wallet";
+import type { ReferralSummary } from "@/lib/referrals";
 
-type Tab = "profile" | "security" | "credits" | "danger";
+type Tab = "profile" | "security" | "credits" | "referrals" | "danger";
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "profile", label: "Profile" },
   { id: "security", label: "Security" },
   { id: "credits", label: "Credits" },
+  { id: "referrals", label: "Referrals" },
   { id: "danger", label: "Danger zone" },
 ];
 
@@ -38,6 +41,8 @@ type Props = {
   initialPhotoUrl: string | null;
   email: string;
   wallet: Wallet;
+  referralToken: string;
+  referrals: ReferralSummary;
   profileHref: string | null;
 };
 
@@ -46,6 +51,8 @@ export default function SettingsForms({
   initialPhotoUrl,
   email,
   wallet,
+  referralToken,
+  referrals,
   profileHref,
 }: Props) {
   const [tab, setTab] = useState<Tab>("profile");
@@ -129,8 +136,12 @@ export default function SettingsForms({
           </div>
         )}
 
-        {tab === "credits" && (
-          <CreditsPanel wallet={wallet} />
+        {tab === "credits" && <CreditsPanel wallet={wallet} />}
+
+        {tab === "referrals" && (
+          <div className="px-5 py-5 sm:px-6">
+            <ReferralInvite token={referralToken} summary={referrals} compact />
+          </div>
         )}
 
         {tab === "danger" && (

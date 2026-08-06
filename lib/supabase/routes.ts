@@ -9,6 +9,7 @@ export const protectedRoutes = [
   "/dashboard",
   "/notifications",
   "/settings",
+  "/referrals",
 ];
 
 /**

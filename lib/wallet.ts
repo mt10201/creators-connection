@@ -11,6 +11,8 @@ export const CREDIT_REASON_LABELS: Record<string, string> = {
   engagement_save: "Save on your post",
   post_deleted: "Post deleted",
   boost_purchase: "Boost purchase",
+  referral_bonus: "Referral reward",
+  referral_welcome: "Welcome from a referral",
 };
 
 export type WalletTransaction = {

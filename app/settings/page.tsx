@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { loadWallet } from "@/lib/wallet";
+import { loadReferralSummary, referralToken } from "@/lib/referrals";
 import SettingsForms from "./SettingsForms";
 
 export const metadata: Metadata = {
@@ -53,9 +54,10 @@ export default async function SettingsPage() {
   const email = user.email?.trim() || "—";
   // The wallet reads the ledger, so this shows spendable rather than the
   // lifetime credit_balance column.
-  const wallet = await loadWallet(supabase, profile?.credit_balance ?? 0, {
-    limit: 10,
-  });
+  const [wallet, referrals] = await Promise.all([
+    loadWallet(supabase, profile?.credit_balance ?? 0, { limit: 10 }),
+    loadReferralSummary(supabase),
+  ]);
   const photoUrl = profile?.profile_photo?.trim() || null;
   const profileHref = username
     ? `/profile/${encodeURIComponent(username)}`
@@ -83,6 +85,8 @@ export default async function SettingsPage() {
             initialPhotoUrl={photoUrl}
             email={email}
             wallet={wallet}
+            referralToken={referralToken(username, user.id)}
+            referrals={referrals}
             profileHref={profileHref}
           />
         </div>

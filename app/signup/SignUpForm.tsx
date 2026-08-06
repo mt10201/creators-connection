@@ -15,7 +15,11 @@ import {
 import Spinner from "@/app/components/Spinner";
 import AuthCard from "@/app/components/AuthCard";
 
-export default function SignUpForm() {
+export default function SignUpForm({
+  referrer = null,
+}: {
+  referrer?: string | null;
+}) {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -59,6 +63,8 @@ export default function SignUpForm() {
       options: {
         data: {
           username: trimmedUsername,
+          // Resolved to a real account (or dropped) by handle_new_user.
+          ...(referrer ? { referred_by: referrer } : {}),
         },
         // Only used when email confirmation is turned on for the project.
         emailRedirectTo: `${window.location.origin}/auth/callback?next=%2Fexplore`,
@@ -112,6 +118,14 @@ export default function SignUpForm() {
       title="Create your account"
       subtitle="Join a community of independent makers"
     >
+      {referrer && (
+        <div className="form-alert-success mb-5">
+          Invited by{" "}
+          <span className="font-semibold">{referrer}</span> — publish your first
+          product and you both earn credits.
+        </div>
+      )}
+
       {error && (
         <div role="alert" className="form-alert-error mb-5">
           {error}
