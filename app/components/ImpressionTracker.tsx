@@ -18,8 +18,6 @@ type Props = {
 /** Already counted this page session; the server dedupes per hour anyway. */
 const seen = new Set<string>();
 
-const DEV = process.env.NODE_ENV !== "production";
-
 /**
  * A card taller than the viewport can never reach a 50% ratio, so measure the
  * visible slice against whichever is smaller: the card or the viewport.
@@ -50,26 +48,12 @@ export default function ImpressionTracker({
   const markerRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
-    if (!postId) {
-      if (DEV) {
-        console.warn("[impression] skipped: missing post id", { surface });
-      }
-      return;
-    }
+    if (!postId) return;
 
     const marker = markerRef.current;
     // The card itself is the visibility target, not the zero-size marker.
     const target = marker?.closest("article") ?? marker?.parentElement;
-
-    if (!target) {
-      if (DEV) {
-        console.warn("[impression] skipped: no card element found", {
-          postId,
-          surface,
-        });
-      }
-      return;
-    }
+    if (!target) return;
 
     const key = `${postId}:${surface}`;
     if (seen.has(key)) return;

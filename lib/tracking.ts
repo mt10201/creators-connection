@@ -62,23 +62,6 @@ type TrackPayload = {
   viewerKey: string;
 };
 
-const DEV = process.env.NODE_ENV !== "production";
-
-/** Beacons are hidden behind the Network panel's "Other"/"Ping" filter. */
-function logSent(payload: TrackPayload, transport: string) {
-  if (!DEV) return;
-  console.log(
-    `[track] ${payload.type} sent via ${transport}`,
-    payload.type === "impression"
-      ? {
-          postId: payload.postId,
-          surface: payload.surface,
-          isBoosted: payload.isBoosted === true,
-        }
-      : { postId: payload.postId, isBoosted: payload.isBoosted === true }
-  );
-}
-
 /**
  * Fire-and-forget. sendBeacon survives the page unload that follows an
  * outbound click; fetch with keepalive is the fallback.
@@ -91,13 +74,9 @@ export function sendTrackingEvent(payload: TrackPayload): void {
   try {
     if (typeof navigator !== "undefined" && navigator.sendBeacon) {
       const blob = new Blob([body], { type: "application/json" });
-      if (navigator.sendBeacon(TRACK_ENDPOINT, blob)) {
-        logSent(payload, "sendBeacon");
-        return;
-      }
+      if (navigator.sendBeacon(TRACK_ENDPOINT, blob)) return;
     }
 
-    logSent(payload, "fetch");
     void fetch(TRACK_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

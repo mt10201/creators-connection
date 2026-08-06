@@ -3,8 +3,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 /** Ledger reason used for every boost debit. */
 export const BOOST_LEDGER_REASON = "boost_purchase";
 
+/** Mirrors supabase/fairness_caps.sql — the RPC is the real enforcer. */
 export const BOOST_CAPS = {
-  concurrentPerAccount: 2,
+  concurrentPerAccount: 3,
   activePerPost: 1,
   purchasesPer24h: 3,
 } as const;
@@ -67,7 +68,7 @@ const BOOST_ERRORS: Record<string, string> = {
   BOOST_POST_TOO_OLD: FRESH_PUSH_TOO_OLD_MESSAGE,
   BOOST_POST_ALREADY_BOOSTED:
     "This post already has an active boost. Wait for it to finish before buying another.",
-  BOOST_TOO_MANY_ACTIVE: `You can run ${BOOST_CAPS.concurrentPerAccount} boosts at a time. Wait for one to end.`,
+  BOOST_TOO_MANY_ACTIVE: `You already have ${BOOST_CAPS.concurrentPerAccount} boosts running. Wait for one to finish before starting another.`,
   BOOST_DAILY_LIMIT: `You can buy ${BOOST_CAPS.purchasesPer24h} boosts per 24 hours. Try again later.`,
   BOOST_INSUFFICIENT_CREDITS:
     "You don’t have enough spendable credits yet. Credits vest 24 hours after you earn them.",

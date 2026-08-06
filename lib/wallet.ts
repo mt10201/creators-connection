@@ -1,5 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+/** Mirrors public.daily_earn_cap() in supabase/fairness_caps.sql. */
+export const CREDIT_DAILY_EARN_CAP = 12;
+
 /** Human labels for every reason written to the credit ledger. */
 export const CREDIT_REASON_LABELS: Record<string, string> = {
   signup_bonus: "Welcome bonus",

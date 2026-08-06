@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { SITE_NAME } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 import { BOOST_CAPS, loadBoostProducts } from "@/lib/boosts";
+import { CREDIT_DAILY_EARN_CAP } from "@/lib/wallet";
 
 const howItWorksDescription =
   "Learn how Creators Connection works — create an account, post your products, browse for inspiration, and use credits to grow.";
@@ -32,6 +33,7 @@ const earnCredits = [
   "+1 credit the first time you post a given product URL",
   "+1 credit to you when someone likes your post (max +10 per post from likes)",
   "+2 credits to you when someone saves your post (max +10 per post from saves)",
+  `Up to ${CREDIT_DAILY_EARN_CAP} credits earned per day across all sources`,
   "Credits become spendable after 24 hours",
   "Up to 10 product posts per day",
 ];
