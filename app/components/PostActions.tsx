@@ -112,10 +112,8 @@ export default function PostActions({
     });
   }
 
-  const baseButton = `inline-flex items-center gap-1.5 rounded-full border font-semibold tabular-nums transition duration-200 ease-out active:scale-[0.94] disabled:cursor-not-allowed ${
-    size === "md"
-      ? "min-h-11 px-4 text-sm"
-      : "min-h-10 px-3.5 text-xs sm:min-h-9 sm:px-3"
+  const baseButton = `inline-flex min-h-11 items-center gap-1.5 rounded-full border font-semibold tabular-nums transition duration-200 ease-out active:scale-[0.94] disabled:cursor-not-allowed ${
+    size === "md" ? "px-4 text-sm" : "px-3.5 text-xs sm:px-3"
   } ${pending ? "opacity-70" : ""}`;
 
   const iconClass = "text-[1.05em] leading-none transition-transform";

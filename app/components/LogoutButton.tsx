@@ -28,7 +28,7 @@ export default function LogoutButton({
       type="button"
       onClick={handleLogout}
       disabled={loading}
-      className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-sand bg-cream px-4 text-sm text-ink-muted transition duration-200 ease-out hover:border-terracotta/40 hover:text-terracotta active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-sand bg-cream px-4 text-sm text-ink-muted transition duration-200 ease-out hover:border-terracotta/40 hover:text-terracotta active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
     >
       {loading && <Spinner className="h-3.5 w-3.5" />}
       {loading ? "Logging out…" : "Log out"}

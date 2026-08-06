@@ -320,7 +320,7 @@ export default function UploadForm({ userId }: { userId: string }) {
                         type="button"
                         onClick={() => removeImage(index)}
                         disabled={loading}
-                        className="absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-cream/90 text-lg leading-none text-ink-muted shadow-soft transition duration-200 hover:scale-105 hover:bg-cream hover:text-terracotta active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded-full bg-cream/90 text-lg leading-none text-ink-muted shadow-soft transition duration-200 hover:scale-105 hover:bg-cream hover:text-terracotta active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <span aria-hidden>×</span>
                         <span className="sr-only">
@@ -403,7 +403,7 @@ export default function UploadForm({ userId }: { userId: string }) {
                       type="button"
                       onClick={removeVideo}
                       disabled={loading}
-                      className="shrink-0 rounded-full bg-cream/95 px-3 py-1 text-xs font-medium text-ink-muted transition hover:text-terracotta disabled:opacity-60"
+                      className="inline-flex min-h-11 shrink-0 items-center rounded-full bg-cream/95 px-4 text-sm font-medium text-ink-muted transition hover:text-terracotta disabled:opacity-60"
                     >
                       Remove
                     </button>

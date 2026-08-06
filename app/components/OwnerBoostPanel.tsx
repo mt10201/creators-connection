@@ -38,7 +38,7 @@ export default function OwnerBoostPanel({
           <button
             type="button"
             onClick={() => setBanner(null)}
-            className="shrink-0 text-xs font-medium underline-offset-4 hover:underline"
+            className="inline-flex min-h-11 shrink-0 items-center px-2 text-sm font-medium underline-offset-4 hover:underline"
           >
             Dismiss
           </button>

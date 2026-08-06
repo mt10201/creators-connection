@@ -115,7 +115,7 @@ export default function ProductCard({
           </p>
         )}
 
-        <div className="rule-double mt-auto flex items-center justify-between gap-3 pt-5">
+        <div className="rule-double mt-auto flex flex-wrap items-center justify-between gap-x-3 gap-y-2 pt-5">
           <PostActions
             postId={post.id}
             isLoggedIn={isLoggedIn}
@@ -127,7 +127,7 @@ export default function ProductCard({
 
           <Link
             href={`/products/${post.id}`}
-            className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-full px-2 text-sm text-terracotta underline-offset-4 transition duration-200 hover:bg-terracotta-soft/40 hover:underline"
+            className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full px-3 text-sm text-terracotta underline-offset-4 transition duration-200 hover:bg-terracotta-soft/40 hover:underline"
           >
             View
             <span

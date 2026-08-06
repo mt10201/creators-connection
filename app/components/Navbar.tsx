@@ -79,12 +79,15 @@ export default async function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-sand/80 bg-cream/85 backdrop-blur-md">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3 sm:px-8 sm:py-4">
-        <Link href="/" className="group flex min-h-11 shrink-0 items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-terracotta font-display text-sm font-semibold text-cream transition duration-200 group-hover:bg-terracotta-deep">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-3 sm:gap-4 sm:px-8 sm:py-4">
+        <Link
+          href="/"
+          className="group flex min-h-11 min-w-0 items-center gap-2.5"
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-terracotta font-display text-sm font-semibold text-cream transition duration-200 group-hover:bg-terracotta-deep">
             cc
           </span>
-          <span className="font-display text-base font-semibold tracking-tight sm:text-lg">
+          <span className="truncate font-display text-base font-semibold tracking-tight max-[360px]:sr-only sm:text-lg">
             Creators Connection
           </span>
         </Link>
@@ -109,7 +112,7 @@ export default async function Navbar() {
           )}
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           {isLoggedIn ? (
             <>
               {/* Bell stays outside the sm-only profile cluster so mobile sees it
@@ -120,7 +123,7 @@ export default async function Navbar() {
                   href="/settings"
                   aria-label={`Account settings for ${displayName}`}
                   title="Account settings"
-                  className="group flex min-h-10 items-center gap-2 rounded-full py-1 text-sm text-ink transition duration-200 hover:text-terracotta"
+                  className="group flex min-h-11 items-center gap-2 rounded-full py-1 text-sm text-ink transition duration-200 hover:text-terracotta"
                 >
                   <Avatar
                     name={displayName}
@@ -143,7 +146,7 @@ export default async function Navbar() {
               </Link>
               <Link
                 href="/signup"
-                className="inline-flex min-h-10 items-center rounded-full bg-terracotta px-5 text-sm font-medium text-cream shadow-soft transition duration-200 ease-out hover:bg-terracotta-deep hover:shadow-lift active:translate-y-px"
+                className="inline-flex min-h-11 items-center rounded-full bg-terracotta px-5 text-sm font-medium text-cream shadow-soft transition duration-200 ease-out hover:bg-terracotta-deep hover:shadow-lift active:translate-y-px"
               >
                 Join Free
               </Link>
@@ -170,13 +173,13 @@ export default async function Navbar() {
               </svg>
               <span className="sr-only">Open menu</span>
             </summary>
-            <nav className="animate-fade-in absolute right-0 top-full mt-3 w-64 overflow-hidden rounded-2xl border border-sand bg-cream py-2 shadow-lift">
+            <nav className="animate-fade-in absolute right-0 top-full z-50 mt-3 max-h-[min(70vh,28rem)] w-[min(16rem,calc(100vw-2.5rem))] overflow-y-auto overflow-x-hidden rounded-2xl border border-sand bg-cream py-2 shadow-lift">
               {isLoggedIn && (
                 <div className="border-b border-sand px-4 pb-3 pt-2">
                   <Link
                     href="/settings"
                     aria-label={`Account settings for ${displayName}`}
-                    className="flex items-center gap-2.5 rounded-xl py-1 transition duration-200 hover:text-terracotta"
+                    className="flex min-h-11 items-center gap-2.5 rounded-xl py-1 transition duration-200 hover:text-terracotta"
                   >
                     <Avatar name={displayName} photoUrl={photoUrl} size="md" />
                     <span className="min-w-0">

@@ -182,13 +182,13 @@ export default async function ProductPage({ params }: Props) {
       <div className="mx-auto max-w-5xl">
         <Link
           href="/explore"
-          className="inline-flex min-h-9 items-center gap-1.5 text-sm text-ink-muted underline-offset-4 transition duration-200 hover:text-terracotta hover:underline"
+          className="inline-flex min-h-11 items-center gap-1.5 text-sm text-ink-muted underline-offset-4 transition duration-200 hover:text-terracotta hover:underline"
         >
           <span aria-hidden>←</span> Back to Explore
         </Link>
 
-        <div className="mt-6 grid gap-10 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-14">
-          <div>
+        <div className="mt-6 grid min-w-0 gap-10 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-14">
+          <div className="min-w-0">
             {images.length > 0 || videoUrl ? (
               <ProductGallery
                 images={images}
@@ -205,14 +205,14 @@ export default async function ProductPage({ params }: Props) {
           </div>
 
           {/* Sticky on desktop so the buy action stays reachable beside a tall gallery. */}
-          <aside className="lg:sticky lg:top-28 lg:self-start">
+          <aside className="min-w-0 lg:sticky lg:top-28 lg:self-start">
             <ImpressionTracker postId={post.id} surface="product" />
 
             {post.category && (
               <span className="eyebrow text-sage">{post.category}</span>
             )}
 
-            <h1 className="mt-3 font-display text-[2rem] font-semibold leading-[1.15] tracking-tight sm:text-[2.5rem]">
+            <h1 className="mt-3 min-w-0 break-words font-display text-[2rem] font-semibold leading-[1.15] tracking-tight sm:text-[2.5rem]">
               {post.product_title ?? "Untitled product"}
             </h1>
 
@@ -286,7 +286,7 @@ export default async function ProductPage({ params }: Props) {
             {post.description && (
               <div className="rule-double mt-7 pt-7">
                 <span className="eyebrow text-ink-faint">About this piece</span>
-                <p className="mt-3 whitespace-pre-line text-[0.95rem] leading-[1.85] text-ink-muted">
+                <p className="mt-3 min-w-0 break-words whitespace-pre-line text-[0.95rem] leading-[1.85] text-ink-muted">
                   {post.description}
                 </p>
               </div>

@@ -79,16 +79,16 @@ export default function ExploreSearch({ initialQuery, category }: Props) {
         placeholder="Search products or creators…"
         autoComplete="off"
         className="form-input mt-0 min-h-12 border-sand bg-cream/90 py-3 pl-12 shadow-soft placeholder:text-ink-faint/80 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
-        style={{ paddingRight: value ? "8.5rem" : "5.25rem" }}
+        style={{ paddingRight: value ? "9.75rem" : "5.75rem" }}
       />
-      <div className="absolute inset-y-0 right-2 flex items-center gap-1.5">
+      <div className="absolute inset-y-0 right-1.5 flex items-center gap-1">
         {value && (
           <button
             type="button"
             onClick={clear}
             disabled={pending}
             aria-label="Clear search"
-            className="flex h-8 w-8 items-center justify-center rounded-full text-ink-faint transition hover:bg-sand hover:text-terracotta disabled:opacity-60"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-ink-faint transition hover:bg-sand hover:text-terracotta disabled:opacity-60"
           >
             <span aria-hidden className="text-lg leading-none">
               ×
@@ -98,7 +98,7 @@ export default function ExploreSearch({ initialQuery, category }: Props) {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-full bg-terracotta px-3.5 py-1.5 text-xs font-medium text-cream transition hover:bg-terracotta-deep disabled:opacity-60"
+          className="inline-flex min-h-11 items-center rounded-full bg-terracotta px-4 text-sm font-medium text-cream transition hover:bg-terracotta-deep disabled:opacity-60"
         >
           Search
         </button>

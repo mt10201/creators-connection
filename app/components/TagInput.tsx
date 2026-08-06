@@ -70,7 +70,7 @@ export default function TagInput({
                   type="button"
                   onClick={() => removeTag(tag)}
                   disabled={disabled}
-                  className="ml-1.5 text-ink-faint transition hover:text-terracotta disabled:opacity-50"
+                  className="-mr-2 ml-0.5 inline-flex h-11 w-11 items-center justify-center text-ink-faint transition hover:text-terracotta disabled:opacity-50"
                   aria-label={`Remove tag ${tag}`}
                 >
                   ×

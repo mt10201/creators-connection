@@ -16,7 +16,7 @@ export default function NotificationBell({ unreadCount, className }: Props) {
       href="/notifications"
       aria-label={label}
       title={label}
-      className={`relative inline-flex h-10 w-10 items-center justify-center rounded-full border transition duration-200 ease-out active:translate-y-px ${
+      className={`relative inline-flex h-11 w-11 items-center justify-center rounded-full border transition duration-200 ease-out active:translate-y-px ${
         hasUnread
           ? "animate-bell-pulse border-terracotta/35 bg-terracotta-soft/40 text-terracotta-deep hover:border-terracotta/60"
           : "border-sand bg-cream text-ink-muted hover:border-terracotta/40 hover:text-terracotta"
