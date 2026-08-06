@@ -7,6 +7,9 @@ export const SITE_TITLE =
 export const SITE_DESCRIPTION =
   "Where independent makers share their products for inspiration and discovery.";
 
+/** Inbox for site and account issues (not product questions). */
+export const CONTACT_EMAIL = "tim@creators-connection.com";
+
 /**
  * Absolute origin used by metadataBase so relative OG/canonical URLs resolve.
  * Prefer NEXT_PUBLIC_SITE_URL in production (e.g. https://www.creators-connection.com).

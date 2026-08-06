@@ -10,7 +10,7 @@ import NotificationBell from "./NotificationBell";
 const navLinks = [
   { href: "/explore", label: "Explore" },
   { href: "/how-it-works", label: "How It Works" },
-  { href: "/#about", label: "About" },
+  { href: "/about", label: "About" },
 ];
 
 async function getViewer() {
