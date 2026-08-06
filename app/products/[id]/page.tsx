@@ -273,7 +273,13 @@ export default async function ProductPage({ params }: Props) {
                 products={boostProducts}
                 spendable={spendable}
                 activeBoost={activeBoost}
-                postCreatedAt={post.created_at}
+                post={{
+                  product_title: post.product_title,
+                  description: post.description,
+                  product_link: post.product_link,
+                  media_urls: images,
+                  created_at: post.created_at,
+                }}
               />
             )}
 

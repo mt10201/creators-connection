@@ -28,7 +28,10 @@ type Props = {
   initialUsername: string;
   initialPhotoUrl: string | null;
   email: string;
+  /** Spendable (vested) credits. */
   credits: number;
+  vestingCredits?: number;
+  nextVestingAt?: string | null;
   profileHref: string | null;
 };
 
@@ -37,6 +40,8 @@ export default function SettingsForms({
   initialPhotoUrl,
   email,
   credits,
+  vestingCredits = 0,
+  nextVestingAt = null,
   profileHref,
 }: Props) {
   const [tab, setTab] = useState<Tab>("profile");
@@ -68,12 +73,21 @@ export default function SettingsForms({
             <dd className="mt-1 font-display text-xl font-semibold tracking-tight text-ink">
               {credits}
               <span className="ml-1.5 text-sm font-medium text-ink-muted">
-                {credits === 1 ? "credit" : "credits"}
+                spendable {credits === 1 ? "credit" : "credits"}
               </span>
             </dd>
             <dd className="mt-0.5 text-xs text-ink-muted">
-              From signup bonus, first-time product links (+1), and likes/saves
-              on your posts.
+              {vestingCredits > 0
+                ? `${vestingCredits} more vesting${
+                    nextVestingAt ? ` — next unlocks ${nextVestingAt}` : ""
+                  }.`
+                : "Credits become spendable 24 hours after you earn them."}{" "}
+              <Link
+                href="/dashboard"
+                className="text-terracotta underline-offset-4 hover:underline"
+              >
+                See activity
+              </Link>
             </dd>
           </div>
           </dl>

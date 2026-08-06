@@ -55,6 +55,16 @@ export const FRESH_PUSH_TOO_OLD_REASON =
 export const FRESH_PUSH_TOO_OLD_MESSAGE =
   "Fresh Push is only available on posts less than 24 hours old. Use Home Feature for older posts, or boost a newer listing.";
 
+/** Boost quality bar. Mirrors purchase_boost() in supabase/*.sql. */
+export const BOOST_MIN_DESCRIPTION_LENGTH = 20;
+
+export const BOOST_BLOCKER_MESSAGES = {
+  image: "Add at least one image to this post before boosting it.",
+  title: "Add a product title before boosting.",
+  description: `Your description needs at least ${BOOST_MIN_DESCRIPTION_LENGTH} characters.`,
+  link: "Add a product link starting with http:// or https:// before boosting.",
+} as const;
+
 const BOOST_ERRORS: Record<string, string> = {
   BOOST_NOT_AUTHENTICATED: "Please log in again to boost this post.",
   BOOST_PRODUCT_UNAVAILABLE: "That boost isn’t available right now.",
@@ -62,9 +72,13 @@ const BOOST_ERRORS: Record<string, string> = {
   BOOST_POST_NOT_FOUND: "We couldn’t find that post.",
   BOOST_NOT_POST_OWNER: "You can only boost your own posts.",
   BOOST_POST_NOT_ACTIVE: "This post isn’t live, so it can’t be boosted.",
-  BOOST_POST_NEEDS_IMAGE: "Add at least one image to this post before boosting it.",
+  BOOST_POST_NEEDS_IMAGE: BOOST_BLOCKER_MESSAGES.image,
+  BOOST_POST_NEEDS_TITLE: BOOST_BLOCKER_MESSAGES.title,
+  BOOST_POST_NEEDS_DESCRIPTION: BOOST_BLOCKER_MESSAGES.description,
+  BOOST_POST_NEEDS_LINK: BOOST_BLOCKER_MESSAGES.link,
+  // Legacy single code from earlier deployments of purchase_boost.
   BOOST_POST_INCOMPLETE:
-    "Add a title, a description of at least 20 characters, and a product link before boosting.",
+    "This post needs a title, a description of at least 20 characters, and a product link before it can be boosted.",
   BOOST_POST_TOO_OLD: FRESH_PUSH_TOO_OLD_MESSAGE,
   BOOST_POST_ALREADY_BOOSTED:
     "This post already has an active boost. Wait for it to finish before buying another.",
@@ -73,6 +87,48 @@ const BOOST_ERRORS: Record<string, string> = {
   BOOST_INSUFFICIENT_CREDITS:
     "You don’t have enough spendable credits yet. Credits vest 24 hours after you earn them.",
 };
+
+/** The post columns the boost quality check reads. */
+export type BoostablePost = {
+  product_title: string | null;
+  description: string | null;
+  product_link: string | null;
+  media_urls: string[] | null;
+  created_at?: string | null;
+};
+
+function isHttpUrl(value: string): boolean {
+  return /^https?:\/\/\S+$/i.test(value);
+}
+
+/**
+ * Same rules purchase_boost() enforces, run client-side so the modal can name
+ * the missing field instead of failing on submit. The RPC is still the
+ * authority; this only avoids a pointless round trip.
+ */
+export function getBoostBlockers(post: BoostablePost): string[] {
+  const blockers: string[] = [];
+
+  const images = (post.media_urls ?? []).filter(
+    (url) => typeof url === "string" && url.trim().length > 0
+  );
+  if (images.length < 1) blockers.push(BOOST_BLOCKER_MESSAGES.image);
+
+  if ((post.product_title ?? "").trim().length < 1) {
+    blockers.push(BOOST_BLOCKER_MESSAGES.title);
+  }
+
+  if ((post.description ?? "").trim().length < BOOST_MIN_DESCRIPTION_LENGTH) {
+    blockers.push(BOOST_BLOCKER_MESSAGES.description);
+  }
+
+  const link = (post.product_link ?? "").trim();
+  if (link.length === 0 || !isHttpUrl(link)) {
+    blockers.push(BOOST_BLOCKER_MESSAGES.link);
+  }
+
+  return blockers;
+}
 
 /** True when a post is still inside the Fresh Push launch window. */
 export function isFreshPushEligible(
@@ -360,4 +416,110 @@ export function formatBoostTimeLeft(endsAt: string): string {
   if (hours < 48) return `${hours} ${hours === 1 ? "hour" : "hours"} left`;
 
   return `${Math.round(hours / 24)} days left`;
+}
+
+/** Precise countdown for the boost manager, e.g. "4h 12m left". */
+export function formatBoostCountdown(endsAt: string): string {
+  const ms = new Date(endsAt).getTime() - Date.now();
+  if (!Number.isFinite(ms) || ms <= 0) return "ending now";
+
+  const totalMinutes = Math.floor(ms / 60000);
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+
+  if (days > 0) return `${days}d ${hours}h left`;
+  if (hours > 0) return `${hours}h ${minutes}m left`;
+  return `${Math.max(1, minutes)}m left`;
+}
+
+export type OwnedBoost = {
+  id: string;
+  postId: string;
+  postTitle: string | null;
+  productName: string;
+  label: string;
+  endsAt: string;
+  /** Null when impressions.sql hasn't been run yet. */
+  impressions: number | null;
+};
+
+const OWNED_BOOST_COLUMNS = "id, post_id, product_slug, label, ends_at";
+
+/**
+ * The signed-in creator's running boosts, soonest to finish first. RLS already
+ * restricts `boosts` to the owner; the user filter keeps it explicit.
+ */
+export async function loadMyActiveBoosts(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<OwnedBoost[]> {
+  const nowIso = new Date().toISOString();
+
+  const query = (columns: string) =>
+    supabase
+      .from("boosts")
+      .select(columns)
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .gt("ends_at", nowIso)
+      .order("ends_at", { ascending: true });
+
+  let hasImpressions = true;
+  let { data, error } = await query(
+    `${OWNED_BOOST_COLUMNS}, impressions_delivered`
+  );
+
+  if (error) {
+    // impressions_delivered only exists once impressions.sql has been applied.
+    hasImpressions = false;
+    ({ data, error } = await query(OWNED_BOOST_COLUMNS));
+  }
+
+  if (error) {
+    console.error("Failed to load your boosts:", error.message);
+    return [];
+  }
+
+  const rows = (data ?? []) as unknown as {
+    id: string;
+    post_id: string;
+    product_slug: string;
+    label: string;
+    ends_at: string;
+    impressions_delivered?: number | null;
+  }[];
+
+  if (rows.length === 0) return [];
+
+  const [{ data: postRows }, { data: productRows }] = await Promise.all([
+    supabase
+      .from("posts")
+      .select("id, product_title")
+      .in("id", [...new Set(rows.map((row) => row.post_id))]),
+    supabase
+      .from("boost_products")
+      .select("slug, name")
+      .in("slug", [...new Set(rows.map((row) => row.product_slug))]),
+  ]);
+
+  const titleById = new Map(
+    (postRows ?? []).map((post) => [post.id as string, post.product_title as string | null])
+  );
+  const nameBySlug = new Map(
+    (productRows ?? []).map((product) => [
+      product.slug as string,
+      product.name as string,
+    ])
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    postId: row.post_id,
+    postTitle: titleById.get(row.post_id) ?? null,
+    productName: nameBySlug.get(row.product_slug) ?? row.label,
+    label: row.label,
+    endsAt: row.ends_at,
+    impressions: hasImpressions ? row.impressions_delivered ?? 0 : null,
+  }));
 }

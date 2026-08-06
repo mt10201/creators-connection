@@ -7,10 +7,10 @@ export const CREDIT_DAILY_EARN_CAP = 12;
 export const CREDIT_REASON_LABELS: Record<string, string> = {
   signup_bonus: "Welcome bonus",
   post_created: "New product link",
-  engagement_like: "Someone liked your post",
-  engagement_save: "Someone saved your post",
+  engagement_like: "Like on your post",
+  engagement_save: "Save on your post",
   post_deleted: "Post deleted",
-  boost_purchase: "Boost purchased",
+  boost_purchase: "Boost purchase",
 };
 
 export type WalletTransaction = {
@@ -20,12 +20,16 @@ export type WalletTransaction = {
   /** Preformatted on the server so hydration cannot disagree on locale. */
   when: string;
   vesting: boolean;
+  /** When a vesting row becomes spendable; null once it already has. */
+  unlocksAt: string | null;
 };
 
 export type Wallet = {
   spendable: number;
   vesting: number;
   total: number;
+  /** Formatted unlock time of the next vesting batch, null when none. */
+  nextVestingAt: string | null;
   transactions: WalletTransaction[];
 };
 
@@ -35,8 +39,23 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
 });
 
+const unlockFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  timeZone: "UTC",
+  timeZoneName: "short",
+});
+
 function labelForReason(reason: string): string {
   return CREDIT_REASON_LABELS[reason] ?? reason.replace(/_/g, " ");
+}
+
+function formatUnlock(value: string | null): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? unlockFormatter.format(date) : null;
 }
 
 /**
@@ -45,7 +64,8 @@ function labelForReason(reason: string): string {
  */
 export async function loadWallet(
   supabase: SupabaseClient,
-  fallbackBalance = 0
+  fallbackBalance = 0,
+  { limit = 6 }: { limit?: number } = {}
 ): Promise<Wallet> {
   const [{ data: summary, error: summaryError }, { data: rows, error: rowsError }] =
     await Promise.all([
@@ -54,7 +74,7 @@ export async function loadWallet(
         .from("credit_transactions")
         .select("id, amount, reason, created_at, available_at")
         .order("created_at", { ascending: false })
-        .limit(6),
+        .limit(limit),
     ]);
 
   if (summaryError) {
@@ -65,24 +85,36 @@ export async function loadWallet(
   }
 
   const now = Date.now();
-  const transactions: WalletTransaction[] = (rows ?? []).map((row) => ({
-    id: row.id as string,
-    amount: (row.amount as number) ?? 0,
-    label: labelForReason((row.reason as string) ?? ""),
-    when: dateFormatter.format(new Date(row.created_at as string)),
-    vesting:
-      (row.amount as number) > 0 &&
-      new Date(row.available_at as string).getTime() > now,
-  }));
+  const transactions: WalletTransaction[] = (rows ?? []).map((row) => {
+    const amount = (row.amount as number) ?? 0;
+    const availableAt = row.available_at as string | null;
+    const vesting =
+      amount > 0 && new Date(availableAt ?? 0).getTime() > now;
+
+    return {
+      id: row.id as string,
+      amount,
+      label: labelForReason((row.reason as string) ?? ""),
+      when: dateFormatter.format(new Date(row.created_at as string)),
+      vesting,
+      unlocksAt: vesting ? formatUnlock(availableAt) : null,
+    };
+  });
 
   const typed = summary as
-    | { spendable: number; vesting: number; total: number }
+    | {
+        spendable: number;
+        vesting: number;
+        total: number;
+        next_vesting_at: string | null;
+      }
     | null;
 
   return {
     spendable: typed?.spendable ?? fallbackBalance,
     vesting: typed?.vesting ?? 0,
     total: typed?.total ?? fallbackBalance,
+    nextVestingAt: formatUnlock(typed?.next_vesting_at ?? null),
     transactions,
   };
 }

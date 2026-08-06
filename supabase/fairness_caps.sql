@@ -205,10 +205,18 @@ begin
     raise exception 'BOOST_POST_NEEDS_IMAGE';
   end if;
 
-  if coalesce(length(trim(v_post.product_title)), 0) < 3
-     or coalesce(length(trim(v_post.description)), 0) < 20
-     or coalesce(length(trim(v_post.product_link)), 0) = 0 then
-    raise exception 'BOOST_POST_INCOMPLETE';
+  -- One error per field so the modal can name what's actually missing.
+  -- Columns are product_title / product_link (not title / product_url).
+  if coalesce(length(trim(v_post.product_title)), 0) < 1 then
+    raise exception 'BOOST_POST_NEEDS_TITLE';
+  end if;
+
+  if coalesce(length(trim(v_post.description)), 0) < 20 then
+    raise exception 'BOOST_POST_NEEDS_DESCRIPTION';
+  end if;
+
+  if coalesce(trim(v_post.product_link), '') !~* '^https?://\S+$' then
+    raise exception 'BOOST_POST_NEEDS_LINK';
   end if;
 
   -- Fresh Push is a launch window: the post must be under 24 hours old.

@@ -55,6 +55,7 @@ async function getViewer() {
         spendable: profile?.credit_balance ?? 0,
         vesting: 0,
         total: profile?.credit_balance ?? 0,
+        nextVestingAt: null,
         transactions: [],
       } satisfies Wallet),
     photoUrl: profile?.profile_photo?.trim() || null,

@@ -11,7 +11,7 @@ function creditWord(count: number) {
 }
 
 export default function CreditWallet({ wallet, className = "" }: Props) {
-  const { spendable, vesting, transactions } = wallet;
+  const { spendable, vesting, nextVestingAt, transactions } = wallet;
 
   return (
     <details className={`group relative ${className}`}>
@@ -40,7 +40,9 @@ export default function CreditWallet({ wallet, className = "" }: Props) {
           </p>
           <p className="mt-1 text-xs text-ink-muted">
             {vesting > 0
-              ? `${vesting} more ${creditWord(vesting)} vesting — credits become spendable 24 hours after you earn them.`
+              ? `${vesting} more ${creditWord(vesting)} vesting${
+                  nextVestingAt ? ` — next unlocks ${nextVestingAt}` : ""
+                }.`
               : "Credits become spendable 24 hours after you earn them."}
           </p>
         </div>
@@ -48,7 +50,9 @@ export default function CreditWallet({ wallet, className = "" }: Props) {
         <div className="px-4 py-3">
           <span className="eyebrow text-ink-faint">Recent activity</span>
           {transactions.length === 0 ? (
-            <p className="mt-2 text-xs text-ink-faint">Nothing yet.</p>
+            <p className="mt-2 text-xs text-ink-faint">
+              Nothing yet — earnings show up here.
+            </p>
           ) : (
             <ul className="mt-2 space-y-1.5">
               {transactions.map((tx) => (
@@ -59,7 +63,16 @@ export default function CreditWallet({ wallet, className = "" }: Props) {
                   <span className="min-w-0 flex-1 truncate text-ink-muted">
                     {tx.label}
                     {tx.vesting && (
-                      <span className="ml-1 text-ink-faint">· vesting</span>
+                      <span
+                        title={
+                          tx.unlocksAt
+                            ? `Becomes spendable ${tx.unlocksAt}`
+                            : undefined
+                        }
+                        className="ml-1 text-ink-faint"
+                      >
+                        · vesting
+                      </span>
                     )}
                   </span>
                   <span className="shrink-0 text-ink-faint">{tx.when}</span>

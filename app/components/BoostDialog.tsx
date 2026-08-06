@@ -6,8 +6,10 @@ import { purchaseBoost } from "@/app/actions/boosts";
 import {
   FRESH_PUSH_SLUG,
   FRESH_PUSH_TOO_OLD_REASON,
+  getBoostBlockers,
   getBoostErrorMessage,
   isFreshPushEligible,
+  type BoostablePost,
   type BoostProduct,
 } from "@/lib/boosts";
 import Spinner from "./Spinner";
@@ -24,8 +26,8 @@ type Props = {
   products: BoostProduct[];
   /** Vested credits only — the RPC enforces the same number server-side. */
   spendable: number;
-  /** Post publish time — used to disable Fresh Push past the 24h window. */
-  postCreatedAt?: string | null;
+  /** Drives the quality check and the Fresh Push 24h window. */
+  post?: BoostablePost | null;
   triggerLabel?: string;
   triggerClassName?: string;
   /** Called on success so the parent can keep a dismissible banner after refresh. */
@@ -52,13 +54,14 @@ export default function BoostDialog({
   postId,
   products,
   spendable,
-  postCreatedAt = null,
+  post = null,
   triggerLabel = "Boost this post",
   triggerClassName = "inline-flex min-h-11 items-center rounded-full border border-ochre/40 bg-ochre/10 px-4 text-sm font-medium text-ochre transition duration-200 hover:border-ochre hover:bg-ochre/20",
   onPurchased,
 }: Props) {
   const router = useRouter();
-  const freshPushOk = isFreshPushEligible(postCreatedAt);
+  const blockers = post ? getBoostBlockers(post) : [];
+  const freshPushOk = isFreshPushEligible(post?.created_at);
   const firstSelectable =
     products.find((item) => !productDisabledReason(item, freshPushOk)) ??
     products[0];
@@ -98,9 +101,14 @@ export default function BoostDialog({
   const product = products.find((item) => item.slug === selected) ?? products[0];
   const selectedDisabledReason = productDisabledReason(product, freshPushOk);
   const canAfford = spendable >= product.cost_credits;
-  const canBuy = canAfford && !selectedDisabledReason;
+  const canBuy = canAfford && !selectedDisabledReason && blockers.length === 0;
 
   function confirm() {
+    if (blockers.length > 0) {
+      setError(blockers[0]);
+      return;
+    }
+
     if (selectedDisabledReason) {
       setError(getBoostErrorMessage("BOOST_POST_TOO_OLD"));
       return;
@@ -177,6 +185,28 @@ export default function BoostDialog({
               </span>
               .
             </p>
+
+            {blockers.length > 0 && (
+              <div className="mt-5 rounded-2xl border border-clay/40 bg-parchment/70 p-4">
+                <p className="text-sm font-medium text-ink">
+                  Finish this post before boosting it
+                </p>
+                <ul className="mt-2 space-y-1.5">
+                  {blockers.map((blocker) => (
+                    <li
+                      key={blocker}
+                      className="flex items-start gap-2 text-sm leading-relaxed text-ink-muted"
+                    >
+                      <span
+                        aria-hidden
+                        className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-clay"
+                      />
+                      {blocker}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             <fieldset className="mt-5 space-y-3">
               <legend className="sr-only">Choose a boost</legend>

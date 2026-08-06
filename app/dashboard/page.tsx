@@ -3,7 +3,11 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { countCollection, loadCollection } from "@/lib/collections";
-import { loadActiveBoostsForPosts, type ActiveBoost } from "@/lib/boosts";
+import {
+  loadActiveBoostsForPosts,
+  loadMyActiveBoosts,
+  type ActiveBoost,
+} from "@/lib/boosts";
 import { loadWallet } from "@/lib/wallet";
 import ProductCard, {
   type ProductCardPost,
@@ -17,6 +21,8 @@ import DashboardTabs, {
   parseDashboardView,
   type DashboardView,
 } from "./DashboardTabs";
+import BoostManager from "./BoostManager";
+import CreditActivity from "./CreditActivity";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -143,7 +149,10 @@ export default async function DashboardPage({
         )
       : new Map();
 
-  const wallet = await loadWallet(supabase, credits);
+  const [wallet, myBoosts] = await Promise.all([
+    loadWallet(supabase, credits, { limit: 15 }),
+    loadMyActiveBoosts(supabase, user.id),
+  ]);
 
   const isNewCreator = posts.length === 0;
   const heading = headings[activeView];
@@ -208,7 +217,13 @@ export default async function DashboardPage({
             </p>
             {wallet.vesting > 0 && (
               <p className="mt-2 text-sm text-ink-muted">
-                {wallet.vesting} more still vesting.
+                <span className="font-medium text-ink">
+                  {wallet.vesting} {wallet.vesting === 1 ? "credit" : "credits"}
+                </span>{" "}
+                still vesting
+                {wallet.nextVestingAt
+                  ? ` — the next batch unlocks ${wallet.nextVestingAt}.`
+                  : "."}
               </p>
             )}
             <p className="mt-4 max-w-lg text-sm leading-relaxed text-ink-muted">
@@ -240,6 +255,10 @@ export default async function DashboardPage({
               </li>
             ))}
           </ul>
+
+          <BoostManager boosts={myBoosts} />
+
+          <CreditActivity transactions={wallet.transactions} />
         </div>
       </section>
 

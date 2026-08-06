@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   formatBoostTimeLeft,
   type ActiveBoost,
+  type BoostablePost,
   type BoostProduct,
 } from "@/lib/boosts";
 import BoostDialog from "./BoostDialog";
@@ -13,8 +14,8 @@ type Props = {
   products: BoostProduct[];
   spendable: number;
   activeBoost: ActiveBoost | null;
-  /** Used to disable Fresh Push once the 24-hour launch window closes. */
-  postCreatedAt?: string | null;
+  /** Drives the quality check and the Fresh Push 24-hour launch window. */
+  post?: BoostablePost | null;
 };
 
 export default function OwnerBoostPanel({
@@ -22,7 +23,7 @@ export default function OwnerBoostPanel({
   products,
   spendable,
   activeBoost,
-  postCreatedAt = null,
+  post = null,
 }: Props) {
   const [banner, setBanner] = useState<string | null>(null);
 
@@ -70,7 +71,7 @@ export default function OwnerBoostPanel({
               postId={postId}
               products={products}
               spendable={spendable}
-              postCreatedAt={postCreatedAt}
+              post={post}
               onPurchased={({ productName, durationHours, label }) => {
                 setBanner(
                   `${productName} is live for ${durationHours} hours (labeled “${label}”).`
