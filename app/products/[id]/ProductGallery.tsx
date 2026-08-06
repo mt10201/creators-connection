@@ -20,6 +20,11 @@ export default function ProductGallery({ images, title, videoUrl }: Props) {
   const activeImage = images[imageIndex];
   const total = images.length + (hasVideo ? 1 : 0);
 
+  function goTo(delta: number) {
+    if (total < 2) return;
+    setActiveIndex((current) => (current + delta + total) % total);
+  }
+
   // Pause decoding while the tab is hidden; resume the same muted loop on return.
   useEffect(() => {
     if (!showingVideo) return;
@@ -47,9 +52,26 @@ export default function ProductGallery({ images, title, videoUrl }: Props) {
   }
 
   return (
-    <div>
+    <div
+      tabIndex={total > 1 ? 0 : undefined}
+      onKeyDown={(event) => {
+        if (total < 2) return;
+        if (event.key === "ArrowLeft") {
+          event.preventDefault();
+          goTo(-1);
+        } else if (event.key === "ArrowRight") {
+          event.preventDefault();
+          goTo(1);
+        }
+      }}
+      className={
+        total > 1
+          ? "rounded-card outline-none focus-visible:ring-4 focus-visible:ring-terracotta-soft/60"
+          : undefined
+      }
+    >
       <div className="rounded-card border border-sand bg-parchment p-3 shadow-soft sm:p-4">
-        <div className="relative aspect-[4/3] overflow-hidden rounded-[1rem] bg-cream">
+        <div className="group relative aspect-[4/3] overflow-hidden rounded-[1rem] bg-cream">
           {showingVideo && videoUrl ? (
             <video
               key={videoUrl}
@@ -81,6 +103,21 @@ export default function ProductGallery({ images, title, videoUrl }: Props) {
             <span className="absolute left-3 top-3 rounded-full bg-cream/90 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-terracotta-deep backdrop-blur-sm">
               Video
             </span>
+          )}
+
+          {total > 1 && (
+            <>
+              <GalleryArrow
+                direction="prev"
+                onClick={() => goTo(-1)}
+                label="Previous media"
+              />
+              <GalleryArrow
+                direction="next"
+                onClick={() => goTo(1)}
+                label="Next media"
+              />
+            </>
           )}
         </div>
       </div>
@@ -151,5 +188,44 @@ export default function ProductGallery({ images, title, videoUrl }: Props) {
         </>
       )}
     </div>
+  );
+}
+
+function GalleryArrow({
+  direction,
+  onClick,
+  label,
+}: {
+  direction: "prev" | "next";
+  onClick: () => void;
+  label: string;
+}) {
+  const isPrev = direction === "prev";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className={`absolute top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-sand bg-cream/90 text-ink shadow-soft backdrop-blur-sm transition duration-200 hover:border-terracotta/40 hover:text-terracotta active:scale-95 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100 ${
+        isPrev ? "left-2.5" : "right-2.5"
+      }`}
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={1.75}
+        stroke="currentColor"
+        className="h-5 w-5"
+        aria-hidden
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d={isPrev ? "M15.75 19.5 8.25 12l7.5-7.5" : "m8.25 4.5 7.5 7.5-7.5 7.5"}
+        />
+      </svg>
+    </button>
   );
 }
