@@ -3,12 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { productCategories, type ProductCategory } from "@/lib/categories";
 import {
   MAX_IMAGES,
   MAX_VIDEO_SECONDS,
+  type EditableImage,
   type ExistingMedia,
   updatePost,
   validateImage,
@@ -21,6 +22,19 @@ import Spinner from "@/app/components/Spinner";
 
 const inputClass = "form-input";
 const labelClass = "form-label";
+
+function moveItem<T>(list: T[], from: number, to: number): T[] {
+  if (from === to || to < 0 || to >= list.length) return list;
+  const next = [...list];
+  const [moved] = next.splice(from, 1);
+  next.splice(to, 0, moved);
+  return next;
+}
+
+/** A gallery slot in the editor. `id` keeps React keys stable across reorders. */
+type GalleryItem =
+  | { id: string; kind: "existing"; url: string; path: string }
+  | { id: string; kind: "new"; file: File; previewUrl: string };
 
 export type EditablePost = {
   id: string;
@@ -48,16 +62,16 @@ export default function EditForm({
   const [productUrl, setProductUrl] = useState(post.product_link);
   const [category, setCategory] = useState<ProductCategory | "">(post.category);
   const [tags, setTags] = useState<string[]>(() => sanitizeTags(post.tags));
-  const [keptImages, setKeptImages] = useState<ExistingMedia[]>(() =>
+  const [images, setImages] = useState<GalleryItem[]>(() =>
     post.media_urls
       .map((url, index) => ({
+        id: `existing-${index}`,
+        kind: "existing" as const,
         url,
         path: post.media_paths[index] ?? "",
       }))
       .filter((image) => image.url)
   );
-  const [newImages, setNewImages] = useState<File[]>([]);
-  const [newPreviewUrls, setNewPreviewUrls] = useState<string[]>([]);
   const [keptVideo, setKeptVideo] = useState<ExistingMedia | null>(() =>
     post.video_url
       ? { url: post.video_url, path: post.video_path ?? "" }
@@ -71,16 +85,23 @@ export default function EditForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const totalImages = keptImages.length + newImages.length;
+  const totalImages = images.length;
   const activeVideoUrl =
     newVideoPreviewUrl ??
     (!removeVideo && !newVideo ? (keptVideo?.url ?? null) : null);
 
-  useEffect(() => {
-    const urls = newImages.map((image) => URL.createObjectURL(image));
-    setNewPreviewUrls(urls);
-    return () => urls.forEach((url) => URL.revokeObjectURL(url));
-  }, [newImages]);
+  // Previews are created when a file is picked (not per render) so reordering
+  // doesn't churn object URLs. This releases whatever is left on unmount.
+  const imagesRef = useRef(images);
+  imagesRef.current = images;
+  useEffect(
+    () => () => {
+      imagesRef.current.forEach((item) => {
+        if (item.kind === "new") URL.revokeObjectURL(item.previewUrl);
+      });
+    },
+    []
+  );
 
   useEffect(() => {
     if (!newVideo) {
@@ -106,15 +127,32 @@ export default function EditForm({
       }
     }
 
-    setNewImages((current) => {
-      const combined = [...current, ...selected];
-      const room = MAX_IMAGES - keptImages.length;
-      if (combined.length > room) {
-        setError(`You can have up to ${MAX_IMAGES} images.`);
-        return combined.slice(0, Math.max(0, room));
-      }
-      return combined;
-    });
+    const room = MAX_IMAGES - images.length;
+    if (selected.length > room) {
+      setError(`You can have up to ${MAX_IMAGES} images.`);
+    }
+    if (room <= 0) return;
+
+    const additions: GalleryItem[] = selected.slice(0, room).map((file) => ({
+      id: crypto.randomUUID(),
+      kind: "new",
+      file,
+      previewUrl: URL.createObjectURL(file),
+    }));
+
+    setImages((current) => [...current, ...additions]);
+  }
+
+  function moveImage(from: number, to: number) {
+    setError(null);
+    setImages((current) => moveItem(current, from, to));
+  }
+
+  function removeImage(id: string) {
+    setError(null);
+    const target = images.find((item) => item.id === id);
+    if (target?.kind === "new") URL.revokeObjectURL(target.previewUrl);
+    setImages((current) => current.filter((item) => item.id !== id));
   }
 
   async function handleVideoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -185,8 +223,11 @@ export default function EditForm({
         productUrl,
         category,
         tags,
-        keepImages: keptImages,
-        newImages,
+        images: images.map<EditableImage>((item) =>
+          item.kind === "existing"
+            ? { kind: "existing", url: item.url, path: item.path }
+            : { kind: "new", file: item.file }
+        ),
         keepVideo: removeVideo || newVideo ? null : keptVideo,
         newVideo,
         removeVideo: removeVideo && !newVideo,
@@ -312,76 +353,18 @@ export default function EditForm({
                 </span>
               </span>
 
-              {(keptImages.length > 0 || newPreviewUrls.length > 0) && (
-                <ul className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4">
-                  {keptImages.map((image, index) => (
-                    <li
-                      key={`kept-${image.path || image.url}-${index}`}
-                      className="relative aspect-square overflow-hidden rounded-xl border border-sand bg-cream"
-                    >
-                      <Image
-                        src={image.url}
-                        alt={`Current image ${index + 1}`}
-                        fill
-                        unoptimized
-                        sizes="(min-width: 640px) 25vw, 33vw"
-                        className="object-cover"
-                      />
-                      {index === 0 && newImages.length === 0 && (
-                        <span className="absolute left-1.5 top-1.5 rounded-full bg-cream/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-terracotta-deep">
-                          Cover
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setKeptImages((current) =>
-                            current.filter((_, i) => i !== index)
-                          )
-                        }
-                        disabled={loading}
-                        className="absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-cream/90 text-lg leading-none text-ink-muted shadow-soft transition hover:text-terracotta disabled:opacity-60"
-                      >
-                        <span aria-hidden>×</span>
-                        <span className="sr-only">Remove image</span>
-                      </button>
-                    </li>
-                  ))}
-
-                  {newPreviewUrls.map((url, index) => (
-                    <li
-                      key={url}
-                      className="relative aspect-square overflow-hidden rounded-xl border border-sand bg-cream"
-                    >
-                      <Image
-                        src={url}
-                        alt={`New image ${index + 1}`}
-                        fill
-                        unoptimized
-                        sizes="(min-width: 640px) 25vw, 33vw"
-                        className="object-cover"
-                      />
-                      {keptImages.length === 0 && index === 0 && (
-                        <span className="absolute left-1.5 top-1.5 rounded-full bg-cream/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-terracotta-deep">
-                          Cover
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setNewImages((current) =>
-                            current.filter((_, i) => i !== index)
-                          )
-                        }
-                        disabled={loading}
-                        className="absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-cream/90 text-lg leading-none text-ink-muted shadow-soft transition hover:text-terracotta disabled:opacity-60"
-                      >
-                        <span aria-hidden>×</span>
-                        <span className="sr-only">Remove new image</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+              {images.length > 0 && (
+                <>
+                  <p className="form-hint">
+                    Drag to reorder — the first image is the cover.
+                  </p>
+                  <ImageGrid
+                    images={images}
+                    disabled={loading}
+                    onMove={moveImage}
+                    onRemove={removeImage}
+                  />
+                </>
               )}
 
               {totalImages < MAX_IMAGES && (
@@ -499,5 +482,143 @@ export default function EditForm({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Thumbnail grid with pointer-based drag reordering, so it works with both a
+ * mouse and touch. Arrow keys move a focused tile for keyboard users.
+ */
+function ImageGrid({
+  images,
+  disabled,
+  onMove,
+  onRemove,
+}: {
+  images: GalleryItem[];
+  disabled: boolean;
+  onMove: (from: number, to: number) => void;
+  onRemove: (id: string) => void;
+}) {
+  const tileRefs = useRef<(HTMLLIElement | null)[]>([]);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
+
+  function indexAtPoint(x: number, y: number) {
+    for (let i = 0; i < images.length; i += 1) {
+      const rect = tileRefs.current[i]?.getBoundingClientRect();
+      if (
+        rect &&
+        x >= rect.left &&
+        x <= rect.right &&
+        y >= rect.top &&
+        y <= rect.bottom
+      ) {
+        return i;
+      }
+    }
+    return null;
+  }
+
+  function endDrag() {
+    if (dragIndex !== null && overIndex !== null) {
+      onMove(dragIndex, overIndex);
+    }
+    setDragIndex(null);
+    setOverIndex(null);
+  }
+
+  function moveWithKeyboard(from: number, to: number) {
+    if (to < 0 || to >= images.length) return;
+    onMove(from, to);
+    // Keep focus on the image that moved, not the position it left behind.
+    requestAnimationFrame(() => tileRefs.current[to]?.focus());
+  }
+
+  return (
+    <ul className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4">
+      {images.map((item, index) => {
+        const isDragging = dragIndex === index;
+        const isTarget =
+          dragIndex !== null && overIndex === index && !isDragging;
+
+        return (
+          <li
+            key={item.id}
+            ref={(node) => {
+              tileRefs.current[index] = node;
+            }}
+            tabIndex={disabled ? -1 : 0}
+            aria-label={`Image ${index + 1} of ${images.length}${
+              index === 0 ? " (cover)" : ""
+            }. Use arrow keys to reorder.`}
+            onPointerDown={(event) => {
+              if (disabled || images.length < 2) return;
+              // Let the remove button handle its own taps.
+              if ((event.target as HTMLElement).closest("button")) return;
+              event.currentTarget.setPointerCapture(event.pointerId);
+              setDragIndex(index);
+              setOverIndex(index);
+            }}
+            onPointerMove={(event) => {
+              if (dragIndex === null) return;
+              const next = indexAtPoint(event.clientX, event.clientY);
+              if (next !== null && next !== overIndex) setOverIndex(next);
+            }}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+            onKeyDown={(event) => {
+              if (disabled) return;
+              if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+                event.preventDefault();
+                moveWithKeyboard(index, index - 1);
+              } else if (
+                event.key === "ArrowRight" ||
+                event.key === "ArrowDown"
+              ) {
+                event.preventDefault();
+                moveWithKeyboard(index, index + 1);
+              }
+            }}
+            className={`relative aspect-square touch-none select-none overflow-hidden rounded-xl border bg-cream transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-terracotta-soft/60 ${
+              images.length > 1 && !disabled ? "cursor-grab" : ""
+            } ${isDragging ? "scale-95 border-terracotta opacity-60" : ""} ${
+              isTarget ? "border-terracotta ring-2 ring-terracotta/40" : "border-sand"
+            }`}
+          >
+            <Image
+              src={item.kind === "existing" ? item.url : item.previewUrl}
+              alt={index === 0 ? "Cover image" : `Image ${index + 1}`}
+              fill
+              unoptimized
+              draggable={false}
+              sizes="(min-width: 640px) 25vw, 33vw"
+              className="pointer-events-none object-cover"
+            />
+
+            {index === 0 && (
+              <span className="absolute left-1.5 top-1.5 rounded-full bg-cream/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-terracotta-deep">
+                Cover
+              </span>
+            )}
+
+            <button
+              type="button"
+              onClick={() => onRemove(item.id)}
+              disabled={disabled || images.length === 1}
+              title={
+                images.length === 1
+                  ? "A post needs at least one image"
+                  : undefined
+              }
+              className="absolute bottom-1 right-1 flex h-11 w-11 items-center justify-center rounded-full bg-cream/90 text-lg leading-none text-ink-muted shadow-soft transition hover:text-terracotta disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <span aria-hidden>×</span>
+              <span className="sr-only">Remove image {index + 1}</span>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

@@ -379,16 +379,22 @@ export type ExistingMedia = {
   path: string;
 };
 
+/** One slot in the edited gallery: either a file already in storage or a new upload. */
+export type EditableImage =
+  | ({ kind: "existing" } & ExistingMedia)
+  | { kind: "new"; file: File };
+
 export type UpdatePostInput = {
   title: string;
   description: string;
   productUrl: string;
   category: ProductCategory;
   tags?: string[];
-  /** Existing images kept (order preserved). */
-  keepImages: ExistingMedia[];
-  /** Newly added image files, appended after keepImages. */
-  newImages: File[];
+  /**
+   * The full gallery in display order — index 0 is the cover. Existing and new
+   * images can be interleaved, so a fresh upload can become the cover.
+   */
+  images: EditableImage[];
   /** Existing video to keep, if any. Ignored when newVideo is set or removeVideo. */
   keepVideo: ExistingMedia | null;
   newVideo?: File | null;
@@ -416,15 +422,23 @@ export async function updatePost(
     if (newlyUploaded.length > 0) await storage.remove(newlyUploaded);
   }
 
-  const finalPaths: string[] = input.keepImages.map((image) => image.path);
-  const finalUrls: string[] = input.keepImages.map((image) => image.url);
+  // Walk the gallery in order so media_urls/media_paths mirror what the
+  // creator arranged, whether a slot is an existing file or a new upload.
+  const finalPaths: string[] = [];
+  const finalUrls: string[] = [];
 
-  for (const image of input.newImages) {
-    const path = `${userId}/${crypto.randomUUID()}.${fileExtension(image)}`;
-    const { error: uploadError } = await storage.upload(path, image, {
+  for (const image of input.images) {
+    if (image.kind === "existing") {
+      finalPaths.push(image.path);
+      finalUrls.push(image.url);
+      continue;
+    }
+
+    const path = `${userId}/${crypto.randomUUID()}.${fileExtension(image.file)}`;
+    const { error: uploadError } = await storage.upload(path, image.file, {
       cacheControl: "3600",
       upsert: false,
-      contentType: image.type,
+      contentType: image.file.type,
     });
 
     if (uploadError) {
