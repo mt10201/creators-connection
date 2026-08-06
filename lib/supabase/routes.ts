@@ -11,8 +11,11 @@ export const protectedRoutes = [
   "/settings",
 ];
 
-/** Routes an authenticated user should be bounced away from. */
-export const authRoutes = ["/login", "/signup"];
+/**
+ * Routes an authenticated user should be bounced away from. `/reset-password`
+ * is deliberately absent: a recovery link signs you in before you land there.
+ */
+export const authRoutes = ["/login", "/signup", "/forgot-password"];
 
 function matches(pathname: string, routes: string[]) {
   return routes.some(

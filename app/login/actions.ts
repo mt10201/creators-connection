@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { trackEvent } from "@/lib/analytics";
+import { authErrorMessage } from "@/lib/auth-errors";
 import { createClient } from "@/lib/supabase/server";
 
 const GENERIC_FAILURE =
@@ -49,11 +50,16 @@ export async function login(
   });
 
   if (signInError) {
+    // Bad credentials keep the username-aware wording; everything else is
+    // mapped so a raw Supabase message never reaches the form.
+    const isBadCredentials =
+      signInError.code === "invalid_credentials" ||
+      signInError.message === "Invalid login credentials";
+
     return {
-      error:
-        signInError.message === "Invalid login credentials"
-          ? GENERIC_FAILURE
-          : signInError.message,
+      error: isBadCredentials
+        ? GENERIC_FAILURE
+        : authErrorMessage(signInError, GENERIC_FAILURE),
     };
   }
 

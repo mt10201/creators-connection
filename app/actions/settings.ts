@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { authErrorMessage } from "@/lib/auth-errors";
 import { validateNewPassword } from "@/lib/password";
 import {
   PRODUCT_IMAGES_BUCKET,
@@ -184,7 +185,7 @@ export async function changePassword(
     ) {
       return { ok: false, error: "Current password is incorrect." };
     }
-    return { ok: false, error: updateError.message };
+    return { ok: false, error: authErrorMessage(updateError) };
   }
 
   return { ok: true, message: "Password updated." };
