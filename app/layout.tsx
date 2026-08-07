@@ -9,6 +9,7 @@ import {
   SITE_TITLE,
 } from "@/lib/site";
 import Navbar from "./components/Navbar";
+import RecoveryLinkCatcher from "./components/RecoveryLinkCatcher";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -85,6 +86,8 @@ export default function RootLayout({
       className={`${dmSans.variable} ${fraunces.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col font-sans text-ink">
+        {/* Recovery links can land on any route, so this listens everywhere. */}
+        <RecoveryLinkCatcher />
         <Navbar />
 
         <main className="flex-1">{children}</main>

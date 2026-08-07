@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { isRecoveryHash } from "@/lib/auth-recovery";
 import { validateNewPassword, MIN_PASSWORD_LENGTH } from "@/lib/password";
 import Spinner from "@/app/components/Spinner";
 import AuthCard from "@/app/components/AuthCard";
@@ -19,6 +20,30 @@ export default function ResetPasswordForm({
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [pending, startTransition] = useTransition();
+
+  // The server can't see a URL fragment, so a link landing here on the implicit
+  // flow renders as expired for a moment while RecoveryLinkCatcher claims the
+  // session and refreshes. Hold the "expired" copy back until that settles.
+  const [claiming, setClaiming] = useState(false);
+
+  useEffect(() => {
+    if (!fromRecoveryLink && isRecoveryHash(window.location.hash)) {
+      setClaiming(true);
+    }
+  }, [fromRecoveryLink]);
+
+  if (!fromRecoveryLink && claiming) {
+    return (
+      <AuthCard
+        title="Checking your link…"
+        subtitle="One moment while we verify your reset link."
+      >
+        <div className="flex justify-center py-2 text-ink-muted">
+          <Spinner />
+        </div>
+      </AuthCard>
+    );
+  }
 
   if (!fromRecoveryLink) {
     return (

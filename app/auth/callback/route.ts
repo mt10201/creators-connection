@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   RECOVERY_COOKIE,
   RESET_PASSWORD_PATH,
+  RESET_PENDING_COOKIE,
   recoveryCookieOptions,
 } from "@/lib/auth-recovery";
 
@@ -68,6 +69,7 @@ export async function GET(request: NextRequest) {
   if (next === RESET_PASSWORD_PATH || type === "recovery") {
     const cookieStore = await cookies();
     cookieStore.set(RECOVERY_COOKIE, "1", recoveryCookieOptions);
+    cookieStore.delete(RESET_PENDING_COOKIE);
     return NextResponse.redirect(absolute(request, RESET_PASSWORD_PATH));
   }
 

@@ -4,15 +4,19 @@ import Link from "next/link";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { authErrorMessage } from "@/lib/auth-errors";
-import { RESET_PASSWORD_PATH } from "@/lib/auth-recovery";
+import { RECOVERY_API_PATH, RESET_PASSWORD_PATH } from "@/lib/auth-recovery";
 import Spinner from "@/app/components/Spinner";
 import AuthCard from "@/app/components/AuthCard";
 
-export default function ForgotPasswordForm() {
+export default function ForgotPasswordForm({
+  notice = null,
+}: {
+  notice?: string | null;
+}) {
   const [email, setEmail] = useState("");
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(notice);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -26,7 +30,20 @@ export default function ForgotPasswordForm() {
 
     setLoading(true);
 
+    // Remembers the intent server-side. Supabase silently discards redirectTo
+    // when it isn't on the project allow list, and the returning link then
+    // carries no clue that it's a recovery rather than a signup confirmation.
+    await fetch(RECOVERY_API_PATH, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ intent: "pending" }),
+    }).catch(() => {
+      // Non-fatal: an allow-listed redirect still lands on /reset-password.
+    });
+
     const supabase = createClient();
+    // Origin comes from the current page, never a hardcoded host, so the link
+    // returns to whichever environment asked for it.
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(
       trimmed,
       {
