@@ -7,6 +7,7 @@ export const productCategories = [
   "Woodworking",
   "Furniture",
   "Electronics",
+  "Machinery",
   "Toys",
   "Designs",
   "Unique Craft",
