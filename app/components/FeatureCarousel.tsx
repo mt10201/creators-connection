@@ -81,6 +81,27 @@ export default function FeatureCarousel({ slides }: { slides: FeatureSlide[] }) 
               </Link>
             );
           })}
+
+          {slides.length > 1 && (
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center bg-gradient-to-t from-ink/45 to-transparent px-4 pb-3 pt-10 sm:pb-4">
+              <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-cream/90 px-3 py-2 shadow-soft">
+                {slides.map((item, slideIndex) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setIndex(slideIndex)}
+                    aria-label={`Show ${item.title}`}
+                    aria-current={slideIndex === index}
+                    className={`h-2 w-2 rounded-full transition duration-200 ${
+                      slideIndex === index
+                        ? "w-6 bg-terracotta"
+                        : "bg-clay hover:bg-terracotta/60"
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="relative min-h-[18rem] sm:min-h-[20rem]">
@@ -90,7 +111,7 @@ export default function FeatureCarousel({ slides }: { slides: FeatureSlide[] }) 
               <div
                 key={slide.id}
                 aria-hidden={!active}
-                className={`absolute inset-0 flex flex-col justify-center px-6 py-8 pb-14 transition-opacity ease-out sm:px-10 sm:py-12 sm:pb-16 ${
+                className={`absolute inset-0 flex flex-col justify-center px-6 py-8 transition-opacity ease-out sm:px-10 sm:py-12 ${
                   active
                     ? "z-10 opacity-100"
                     : "pointer-events-none z-0 opacity-0"
@@ -161,25 +182,6 @@ export default function FeatureCarousel({ slides }: { slides: FeatureSlide[] }) 
               </div>
             );
           })}
-
-          {slides.length > 1 && (
-            <div className="absolute bottom-5 left-6 z-20 flex items-center gap-2 sm:bottom-7 sm:left-10">
-              {slides.map((item, slideIndex) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setIndex(slideIndex)}
-                  aria-label={`Show ${item.title}`}
-                  aria-current={slideIndex === index}
-                  className={`h-2 w-2 rounded-full transition duration-200 ${
-                    slideIndex === index
-                      ? "w-6 bg-terracotta"
-                      : "bg-clay hover:bg-terracotta/60"
-                  }`}
-                />
-              ))}
-            </div>
-          )}
         </div>
       </div>
     </div>
