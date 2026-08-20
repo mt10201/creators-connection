@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -19,17 +18,10 @@ import {
 import { sanitizeTags } from "@/lib/tags";
 import TagInput from "@/app/components/TagInput";
 import Spinner from "@/app/components/Spinner";
+import ImageGrid, { moveItem } from "@/app/components/ImageGrid";
 
 const inputClass = "form-input";
 const labelClass = "form-label";
-
-function moveItem<T>(list: T[], from: number, to: number): T[] {
-  if (from === to || to < 0 || to >= list.length) return list;
-  const next = [...list];
-  const [moved] = next.splice(from, 1);
-  next.splice(to, 0, moved);
-  return next;
-}
 
 /** A gallery slot in the editor. `id` keeps React keys stable across reorders. */
 type GalleryItem =
@@ -359,8 +351,12 @@ export default function EditForm({
                     Drag to reorder — the first image is the cover.
                   </p>
                   <ImageGrid
-                    images={images}
+                    images={images.map((item) => ({
+                      id: item.id,
+                      src: item.kind === "existing" ? item.url : item.previewUrl,
+                    }))}
                     disabled={loading}
+                    minImages={1}
                     onMove={moveImage}
                     onRemove={removeImage}
                   />
@@ -482,143 +478,5 @@ export default function EditForm({
         </div>
       </div>
     </div>
-  );
-}
-
-/**
- * Thumbnail grid with pointer-based drag reordering, so it works with both a
- * mouse and touch. Arrow keys move a focused tile for keyboard users.
- */
-function ImageGrid({
-  images,
-  disabled,
-  onMove,
-  onRemove,
-}: {
-  images: GalleryItem[];
-  disabled: boolean;
-  onMove: (from: number, to: number) => void;
-  onRemove: (id: string) => void;
-}) {
-  const tileRefs = useRef<(HTMLLIElement | null)[]>([]);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [overIndex, setOverIndex] = useState<number | null>(null);
-
-  function indexAtPoint(x: number, y: number) {
-    for (let i = 0; i < images.length; i += 1) {
-      const rect = tileRefs.current[i]?.getBoundingClientRect();
-      if (
-        rect &&
-        x >= rect.left &&
-        x <= rect.right &&
-        y >= rect.top &&
-        y <= rect.bottom
-      ) {
-        return i;
-      }
-    }
-    return null;
-  }
-
-  function endDrag() {
-    if (dragIndex !== null && overIndex !== null) {
-      onMove(dragIndex, overIndex);
-    }
-    setDragIndex(null);
-    setOverIndex(null);
-  }
-
-  function moveWithKeyboard(from: number, to: number) {
-    if (to < 0 || to >= images.length) return;
-    onMove(from, to);
-    // Keep focus on the image that moved, not the position it left behind.
-    requestAnimationFrame(() => tileRefs.current[to]?.focus());
-  }
-
-  return (
-    <ul className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4">
-      {images.map((item, index) => {
-        const isDragging = dragIndex === index;
-        const isTarget =
-          dragIndex !== null && overIndex === index && !isDragging;
-
-        return (
-          <li
-            key={item.id}
-            ref={(node) => {
-              tileRefs.current[index] = node;
-            }}
-            tabIndex={disabled ? -1 : 0}
-            aria-label={`Image ${index + 1} of ${images.length}${
-              index === 0 ? " (cover)" : ""
-            }. Use arrow keys to reorder.`}
-            onPointerDown={(event) => {
-              if (disabled || images.length < 2) return;
-              // Let the remove button handle its own taps.
-              if ((event.target as HTMLElement).closest("button")) return;
-              event.currentTarget.setPointerCapture(event.pointerId);
-              setDragIndex(index);
-              setOverIndex(index);
-            }}
-            onPointerMove={(event) => {
-              if (dragIndex === null) return;
-              const next = indexAtPoint(event.clientX, event.clientY);
-              if (next !== null && next !== overIndex) setOverIndex(next);
-            }}
-            onPointerUp={endDrag}
-            onPointerCancel={endDrag}
-            onKeyDown={(event) => {
-              if (disabled) return;
-              if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-                event.preventDefault();
-                moveWithKeyboard(index, index - 1);
-              } else if (
-                event.key === "ArrowRight" ||
-                event.key === "ArrowDown"
-              ) {
-                event.preventDefault();
-                moveWithKeyboard(index, index + 1);
-              }
-            }}
-            className={`relative aspect-square touch-none select-none overflow-hidden rounded-xl border bg-cream transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-terracotta-soft/60 ${
-              images.length > 1 && !disabled ? "cursor-grab" : ""
-            } ${isDragging ? "scale-95 border-terracotta opacity-60" : ""} ${
-              isTarget ? "border-terracotta ring-2 ring-terracotta/40" : "border-sand"
-            }`}
-          >
-            <Image
-              src={item.kind === "existing" ? item.url : item.previewUrl}
-              alt={index === 0 ? "Cover image" : `Image ${index + 1}`}
-              fill
-              unoptimized
-              draggable={false}
-              sizes="(min-width: 640px) 25vw, 33vw"
-              className="pointer-events-none object-cover"
-            />
-
-            {index === 0 && (
-              <span className="absolute left-1.5 top-1.5 rounded-full bg-cream/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-terracotta-deep">
-                Cover
-              </span>
-            )}
-
-            <button
-              type="button"
-              onClick={() => onRemove(item.id)}
-              disabled={disabled || images.length === 1}
-              title={
-                images.length === 1
-                  ? "A post needs at least one image"
-                  : undefined
-              }
-              className="absolute bottom-1 right-1 flex h-11 w-11 items-center justify-center rounded-full bg-cream/90 text-lg leading-none text-ink-muted shadow-soft transition hover:text-terracotta disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <span aria-hidden>×</span>
-              <span className="sr-only">Remove image {index + 1}</span>
-            </button>
-          </li>
-        );
-      })}
-    </ul>
   );
 }

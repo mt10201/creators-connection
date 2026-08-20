@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -15,9 +14,12 @@ import {
 } from "@/lib/posts";
 import TagInput from "@/app/components/TagInput";
 import Spinner from "@/app/components/Spinner";
+import ImageGrid, { moveItem } from "@/app/components/ImageGrid";
 
 const inputClass = "form-input";
 const labelClass = "form-label";
+
+type UploadImage = { id: string; file: File; previewUrl: string };
 
 export default function UploadForm({ userId }: { userId: string }) {
   const router = useRouter();
@@ -28,8 +30,7 @@ export default function UploadForm({ userId }: { userId: string }) {
   const [productUrl, setProductUrl] = useState("");
   const [category, setCategory] = useState<ProductCategory | "">("");
   const [tags, setTags] = useState<string[]>([]);
-  const [images, setImages] = useState<File[]>([]);
-  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [images, setImages] = useState<UploadImage[]>([]);
   const [video, setVideo] = useState<File | null>(null);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -39,11 +40,16 @@ export default function UploadForm({ userId }: { userId: string }) {
   /** Locks the form once a post exists, so Publish can't run twice. */
   const published = postedId !== null;
 
-  useEffect(() => {
-    const urls = images.map((image) => URL.createObjectURL(image));
-    setPreviewUrls(urls);
-    return () => urls.forEach((url) => URL.revokeObjectURL(url));
-  }, [images]);
+  // Previews are created when a file is picked (not per render) so reordering
+  // doesn't churn object URLs. This releases whatever is left on unmount.
+  const imagesRef = useRef(images);
+  imagesRef.current = images;
+  useEffect(
+    () => () => {
+      imagesRef.current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+    },
+    []
+  );
 
   useEffect(() => {
     if (!video) {
@@ -70,19 +76,31 @@ export default function UploadForm({ userId }: { userId: string }) {
       }
     }
 
-    setImages((current) => {
-      const combined = [...current, ...selected];
-      if (combined.length > MAX_IMAGES) {
-        setError(`You can add up to ${MAX_IMAGES} images.`);
-        return combined.slice(0, MAX_IMAGES);
-      }
-      return combined;
-    });
+    const room = MAX_IMAGES - images.length;
+    if (selected.length > room) {
+      setError(`You can add up to ${MAX_IMAGES} images.`);
+    }
+    if (room <= 0) return;
+
+    const additions: UploadImage[] = selected.slice(0, room).map((file) => ({
+      id: crypto.randomUUID(),
+      file,
+      previewUrl: URL.createObjectURL(file),
+    }));
+
+    setImages((current) => [...current, ...additions]);
   }
 
-  function removeImage(index: number) {
+  function moveImage(from: number, to: number) {
     setError(null);
-    setImages((current) => current.filter((_, i) => i !== index));
+    setImages((current) => moveItem(current, from, to));
+  }
+
+  function removeImage(id: string) {
+    setError(null);
+    const target = images.find((item) => item.id === id);
+    if (target) URL.revokeObjectURL(target.previewUrl);
+    setImages((current) => current.filter((item) => item.id !== id));
   }
 
   async function handleVideoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -151,7 +169,7 @@ export default function UploadForm({ userId }: { userId: string }) {
       productUrl,
       category,
       tags,
-      images,
+      images: images.map((item) => item.file),
       video,
     });
 
@@ -296,40 +314,22 @@ export default function UploadForm({ userId }: { userId: string }) {
                 </span>
               </span>
 
-              {previewUrls.length > 0 && (
-                <ul className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4">
-                  {previewUrls.map((url, index) => (
-                    <li
-                      key={url}
-                      className="group relative aspect-square overflow-hidden rounded-xl border border-sand bg-cream"
-                    >
-                      <Image
-                        src={url}
-                        alt={`Preview ${index + 1}: ${images[index]?.name ?? ""}`}
-                        fill
-                        unoptimized
-                        sizes="(min-width: 640px) 25vw, 33vw"
-                        className="object-cover"
-                      />
-                      {index === 0 && (
-                        <span className="absolute left-1.5 top-1.5 rounded-full bg-cream/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-terracotta-deep">
-                          Cover
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => removeImage(index)}
-                        disabled={loading}
-                        className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded-full bg-cream/90 text-lg leading-none text-ink-muted shadow-soft transition duration-200 hover:scale-105 hover:bg-cream hover:text-terracotta active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        <span aria-hidden>×</span>
-                        <span className="sr-only">
-                          Remove image {index + 1}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+              {images.length > 0 && (
+                <>
+                  <p className="form-hint">
+                    Drag to reorder — the first image is the cover.
+                  </p>
+                  <ImageGrid
+                    images={images.map((item) => ({
+                      id: item.id,
+                      src: item.previewUrl,
+                      alt: item.file.name,
+                    }))}
+                    disabled={loading || published}
+                    onMove={moveImage}
+                    onRemove={removeImage}
+                  />
+                </>
               )}
 
               {images.length < MAX_IMAGES && (
