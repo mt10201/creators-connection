@@ -43,7 +43,9 @@ export default function UploadForm({ userId }: { userId: string }) {
   // Previews are created when a file is picked (not per render) so reordering
   // doesn't churn object URLs. This releases whatever is left on unmount.
   const imagesRef = useRef(images);
-  imagesRef.current = images;
+  useEffect(() => {
+    imagesRef.current = images;
+  }, [images]);
   useEffect(
     () => () => {
       imagesRef.current.forEach((item) => URL.revokeObjectURL(item.previewUrl));

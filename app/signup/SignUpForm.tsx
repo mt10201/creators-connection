@@ -99,6 +99,10 @@ export default function SignUpForm({
       user_id: data.user.id,
     });
 
+    // Fire-and-forget: the route dedupes per account, and a mail outage must
+    // never block someone from getting into the site.
+    void fetch("/api/welcome-email", { method: "POST" }).catch(() => {});
+
     setSuccess("Account created successfully! Redirecting…");
     router.push("/explore");
     router.refresh();
